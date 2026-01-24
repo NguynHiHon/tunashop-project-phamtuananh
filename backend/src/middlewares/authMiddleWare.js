@@ -1,6 +1,6 @@
 
 const jwt = require('jsonwebtoken');
-const User = require('../models/users');
+const User = require('../models/Users');
 
 const authMiddleWare = {
 
@@ -30,18 +30,13 @@ const authMiddleWare = {
         }
     },
 
-    verifyAdmin: async (req, res, next) => {
-        try {
-            await authMiddleWare.verifyAccessToken(req, res, () => {
-                if (req.user.role !== 'admin') {
-                    return res.status(403).json({ message: 'Yêu cầu quyền admin' });
-                }
-                next();
-            });
-        }
-        catch (error) {
-            return res.status(500).json({ message: 'lỗi hệ thống ' });
-        }
+    verifyAdmin: (req, res, next) => {
+        authMiddleWare.verifyAccessToken(req, res, () => {
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({ message: 'Yêu cầu quyền admin' });
+            }
+            next();
+        });
     }
 };
 
