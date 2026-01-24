@@ -82,7 +82,8 @@ const authSlice = createSlice({
 
         // Set user (for verification, restore session, etc.)
         setUser: (state, action) => {
-            state.currentUser = action.payload.select('-accessToken');
+            const { accessToken, ...userWithoutToken } = action.payload;
+            state.currentUser = userWithoutToken;
             state.isAuthenticated = !!action.payload;
             state.isFetching = false;
             state.error = false;
