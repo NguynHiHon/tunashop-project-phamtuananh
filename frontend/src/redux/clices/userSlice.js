@@ -5,22 +5,26 @@ const userSlice = createSlice({
     initialState: {
         profile: null,
         isFetching: false,
+        usersList: [],
         error: false,
+        message: null,
     },
     reducers: {
         // Get user profile actions
         getUserProfileStart: (state) => {
             state.isFetching = true;
             state.error = false;
+            state.message = null;
         },
         getUserProfileSuccess: (state, action) => {
             state.isFetching = false;
             state.profile = action.payload;
             state.error = false;
         },
-        getUserProfileFailure: (state) => {
+        getUserProfileFailure: (state, action) => {
             state.isFetching = false;
             state.error = true;
+            state.message = action.payload;
         },
 
         // Clear user profile (khi logout)
@@ -28,6 +32,7 @@ const userSlice = createSlice({
             state.profile = null;
             state.isFetching = false;
             state.error = false;
+            state.message = null;
         },
 
         // Update user profile
@@ -39,6 +44,23 @@ const userSlice = createSlice({
                 };
             }
         },
+
+        //lấy danh sách người dùng (admin) 
+        getUsersListStart: (state) => {
+            state.isFetching = true;
+            state.error = false;
+            state.message = null;
+        },
+        getUsersListSuccess: (state, action) => {
+            state.isFetching = false;
+            state.usersList = action.payload.users;
+            state.error = false;
+        },
+        getUsersListFailure: (state, action) => {
+            state.isFetching = false;
+            state.error = true;
+            state.message = action.payload.message;
+        },
     },
 });
 
@@ -48,6 +70,9 @@ export const {
     getUserProfileFailure,
     clearUserProfile,
     updateUserProfile,
+    getUsersListStart,
+    getUsersListSuccess,
+    getUsersListFailure,
 } = userSlice.actions;
 
 export default userSlice.reducer;

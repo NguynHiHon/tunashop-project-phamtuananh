@@ -6,6 +6,16 @@ import { useSelector, useDispatch } from 'react-redux'
 import { setupJwtInterceptors } from './config/axiosJWT'
 import { store } from './redux/store'
 import socketService from './services/socketService'
+import CrudDashboard from './pages//Admin-Management/CrudDashboard'
+import DashboardLayout from './pages//Admin-Management/components/DashboardLayout'
+import EmployeeList from './pages//Admin-Management/components/employee/EmployeeList'
+import EmployeeShow from './pages//Admin-Management/components/employee/EmployeeShow'
+import EmployeeCreate from './pages//Admin-Management/components/employee/EmployeeCreate'
+import EmployeeEdit from './pages//Admin-Management/components/employee/EmployeeEdit'
+import CategoryList from './pages//Admin-Management/components/CategoryList'
+import ProductList from './pages//Admin-Management/components/product/ProductList'
+import ProductCreate from './pages//Admin-Management/components/product/ProductCreate'
+import ProductEdit from './pages//Admin-Management/components/product/ProductEdit'
 import {
   addOnlineUser,
   removeOnlineUser,
@@ -71,16 +81,32 @@ function App() {
 
   return (
     <>
-      <Toaster position='top-right' richColors/>
+      <Toaster position='top-right' richColors />
       <Router>
         <Routes>
-          <Route path='/signup' element={<SignUpPage/>}/>
-          <Route path='/signin' element={<SignInPage/>}/>
-          <Route path='/profile' element={<ProfilePage/>}/>
-          <Route path='/chat' element={<ChatAppPages/>}/>
-          <Route path='/' element={<ProfilePage/>}/>
+          <Route path='/signup' element={<SignUpPage />} />
+          <Route path='/signin' element={<SignInPage />} />
+          <Route path='/profile' element={<ProfilePage />} />
+          <Route path='/chat' element={<ChatAppPages />} />
+          <Route path='/management' element={<CrudDashboard />}>
+            <Route index element={<EmployeeList />} />
+            <Route path='employees' element={<EmployeeList />} />
+            <Route path='employees/new' element={<EmployeeCreate />} />
+            <Route path='employees/:employeeId' element={<EmployeeShow />} />
+            <Route path='employees/:employeeId/edit' element={<EmployeeEdit />} />
+            <Route path='*' element={<EmployeeList />} />
+
+            {/* category  */}
+            <Route path='categories' element={<CategoryList />} />
+            {/* products */}
+            <Route path='products' element={<ProductList />} />
+            <Route path='products/create' element={<ProductCreate />} />
+            <Route path='products/:id/edit' element={<ProductEdit />} />
+
+          </Route>
+          <Route path='/' element={<ProfilePage />} />
         </Routes>
-      </Router> 
+      </Router>
     </>
   )
 }

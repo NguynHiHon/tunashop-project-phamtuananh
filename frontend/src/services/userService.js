@@ -2,24 +2,51 @@ import { axiosJWT } from '../config/axiosJWT';
 import {
     getUserProfileStart,
     getUserProfileSuccess,
-    getUserProfileFailure
+    getUserProfileFailure,
+    getUsersListStart,
+    getUsersListSuccess,
+    getUsersListFailure,
 } from '../redux/clices/userSlice';
 
-// Get User Profile (requires accessToken)
-export const fetchUserProfile = async (dispatch) => {
-    dispatch(getUserProfileStart());
-    try {
-        const res = await axiosJWT.get('/api/user/me');
-        dispatch(getUserProfileSuccess(res.data.userInfo));
-        return res.data.userInfo;
-    } catch (error) {
-        dispatch(getUserProfileFailure());
-        throw error;
-    }
-};
 
-// Update User Profile (if needed later)
-export const updateUserProfile = async (userData) => {
-    const res = await axiosJWT.put('/api/user/me', userData);
-    return res.data;
+const userService = {
+
+    fetchUserProfile: async (dispatch) => {
+        dispatch(getUserProfileStart());
+        try {
+            const res = await axiosJWT.get('/api/users/me');
+            dispatch(getUserProfileSuccess(res.data.userInfo));
+            return res.data.userInfo;
+        } catch (error) {
+            dispatch(getUserProfileFailure());
+            throw error;
+        }
+    },
+
+    // Update User Profile (if needed later)
+    updateUserProfile: async (userData) => {
+        const res = await axiosJWT.put('/api/users/me', userData);
+        return res.data;
+    },
+    // Get All Users (Admin only)
+
+    getAllUser: async (dispatch) => {
+        dispatch(getUsersListStart());
+        try {
+            const res = await axiosJWT.get('/api/users');
+            dispatch(getUsersListSuccess(res.data));
+
+            return res.data;
+        } catch (error) {
+            dispatch(getUsersListFailure(error));
+            throw error;
+        }
+    },
+
+
+
 };
+// Get User Profile (requires accessToken)
+
+export default userService;
+

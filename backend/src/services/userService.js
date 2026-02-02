@@ -14,6 +14,14 @@ const userService = {
         } catch (error) {
             throw error;
         }
+    },
+    getAllUsers: async (role) => {
+        try {
+            const users = await User.find().select('-password');
+            return users;
+        } catch (error) {
+            throw error;
+        }
     }
 };
 

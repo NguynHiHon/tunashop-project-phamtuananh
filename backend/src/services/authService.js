@@ -17,7 +17,7 @@ const checkPasswordStrength = (password) => {
 
 }
 const ReToken_TTL = 30 * 24 * 60 * 60 * 1000;
-const AccessToken_TTL = 30 * 1000;
+const AccessToken_TTL = 5 * 60 * 1000;
 const generateAccessToken = (user) => {
     return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: AccessToken_TTL });
 }

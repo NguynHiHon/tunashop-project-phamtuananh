@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile } from '../services/userService';
+import userService from '../services/userService';
 import { signOutUser } from '../services/authService';
 import { useDispatch } from 'react-redux';
 import { Box, Card, CardContent, Typography, Button, CircularProgress, Alert } from '@mui/material';
@@ -9,14 +9,14 @@ import { Box, Card, CardContent, Typography, Button, CircularProgress, Alert } f
 const ProfilePage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { profile, isFetching, error } = useSelector((state) => state.user);
   const accessToken = useSelector((state) => state.token.accessToken);
 
   const handleFetchProfile = useCallback(async () => {
     try {
-      await fetchUserProfile(dispatch);
+      await userService.fetchUserProfile(dispatch);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
     }
@@ -32,7 +32,7 @@ const ProfilePage = () => {
     if (!profile && accessToken) {
       handleFetchProfile();
     }
-    
+
   }, [isAuthenticated, profile, accessToken, navigate, handleFetchProfile]);
 
   const handleLogout = async () => {

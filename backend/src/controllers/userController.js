@@ -15,6 +15,20 @@ const userController = {
                 message,
             });
         }
+    },
+
+    getAllUsers: async (req, res) => {
+        try {
+            const users = await userService.getAllUsers();
+            return res.status(200).json({ message: 'Lấy danh sách người dùng thành công', users });
+        } catch (error) {
+            const status = error.status || 500;
+            let message = error.message || 'INTERNAL_SERVER_ERROR';
+            return res.status(status).json({
+                message,
+            });
+        }
     }
-}
+};
+
 module.exports = userController;
