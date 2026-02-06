@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { signUpUser } from '../services/authService'
+import useNotifications from '../pages/Admin-Management/hooks/useNotifications/useNotifications'
 import {
   Box,
   Button,
@@ -24,14 +25,21 @@ const SignUpPage = () => {
     formState: { errors },
   } = useForm()
 
+  const notifications = useNotifications()
+
   const onSubmit = async (data) => {
     if (data.password !== data.confirmPassword) {
       setError('confirmPassword', { message: 'Mật khẩu không khớp' })
       return
     }
     try {
-      await signUpUser({ username: data.username, password: data.password }, dispatch, navigate)
+      const res = await signUpUser({ username: data.username, password: data.password, email: data.email }, dispatch, navigate)
+      // Show server success message if present
+      const message = res?.message || 'Đăng ký thành công'
+      notifications.show(message, { severity: 'success', autoHideDuration: 3000 })
     } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || 'Đăng ký thất bại'
+      notifications.show(msg, { severity: 'error', autoHideDuration: 5000 })
       console.error('Sign up error:', e)
     }
   }
@@ -65,6 +73,15 @@ const SignUpPage = () => {
                 helperText={errors.password?.message}
                 {...register('password', { required: 'Password là bắt buộc' })}
               />
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                error={Boolean(errors.email)}
+                helperText={errors.email?.message}
+                {...register('email', { required: 'Email là bắt buộc' })}
+              />
+
               <TextField
                 label="Confirm password"
                 type="password"

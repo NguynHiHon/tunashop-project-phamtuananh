@@ -1,55 +1,43 @@
-import * as React from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router';
 import useNotifications from '../../hooks/useNotifications/useNotifications';
-
+import userService from '../../../../services/userService';
+import { validateEmployee } from './validation';
+import { useEffect } from 'react';
 import EmployeeForm from './EmployeeForm';
 import PageContainer from '../PageContainer';
+import { useState } from 'react';
+
 
 function EmployeeEditForm({ initialValues, onSubmit }) {
   const { employeeId } = useParams();
   const navigate = useNavigate();
-
   const notifications = useNotifications();
 
-  const [formState, setFormState] = React.useState(() => ({
-    values: initialValues,
-    errors: {},
-  }));
+  const [formState, setFormState] = React.useState(() => ({ values: initialValues, errors: {} }));
   const formValues = formState.values;
   const formErrors = formState.errors;
 
   const setFormValues = React.useCallback((newFormValues) => {
-    setFormState((previousState) => ({
-      ...previousState,
-      values: newFormValues,
-    }));
+    setFormState((previousState) => ({ ...previousState, values: newFormValues }));
   }, []);
 
   const setFormErrors = React.useCallback((newFormErrors) => {
-    setFormState((previousState) => ({
-      ...previousState,
-      errors: newFormErrors,
-    }));
+    setFormState((previousState) => ({ ...previousState, errors: newFormErrors }));
   }, []);
 
   const handleFormFieldChange = React.useCallback(
     (name, value) => {
-      const validateField = async (values) => {
-        const { issues } = validateEmployee(values);
-        setFormErrors({
-          ...formErrors,
-          [name]: issues?.find((issue) => issue.path?.[0] === name)?.message,
-        });
-      };
-
-      const newFormValues = { ...formValues, [name]: value };
-
-      setFormValues(newFormValues);
-      validateField(newFormValues);
+      const { issues } = validateEmployee({ ...formValues, [name]: value }, { requirePassword: false });
+      setFormErrors({
+        ...formErrors,
+        [name]: issues?.find((issue) => issue.path?.[0] === name)?.message,
+      });
+      setFormValues({ ...formValues, [name]: value });
     },
     [formValues, formErrors, setFormErrors, setFormValues],
   );
@@ -59,31 +47,22 @@ function EmployeeEditForm({ initialValues, onSubmit }) {
   }, [initialValues, setFormValues]);
 
   const handleFormSubmit = React.useCallback(async () => {
-    const { issues } = validateEmployee(formValues);
+    const { issues } = validateEmployee(formValues, { requirePassword: false });
     if (issues && issues.length > 0) {
-      setFormErrors(
-        Object.fromEntries(issues.map((issue) => [issue.path?.[0], issue.message])),
-      );
+      setFormErrors(Object.fromEntries(issues.map((issue) => [issue.path?.[0], issue.message])));
       return;
     }
     setFormErrors({});
 
     try {
       await onSubmit(formValues);
-      notifications.show('Employee edited successfully.', {
-        severity: 'success',
-        autoHideDuration: 3000,
-      });
-
-      navigate('/employees');
+      notifications.show('Cập nhật nhân viên thành công.', { severity: 'success', autoHideDuration: 3000 });
+      navigate('/management/employees');
     } catch (editError) {
-      notifications.show(`Failed to edit employee. Reason: ${editError.message}`, {
-        severity: 'error',
-        autoHideDuration: 3000,
-      });
+      notifications.show(`Cập nhật thất bại. Lỗi: ${editError.message}`, { severity: 'error', autoHideDuration: 3000 });
       throw editError;
     }
-  }, [formValues, navigate, notifications, onSubmit, setFormErrors]);
+  }, [formValues, onSubmit, navigate, notifications, setFormErrors]);
 
   return (
     <EmployeeForm
@@ -91,97 +70,105 @@ function EmployeeEditForm({ initialValues, onSubmit }) {
       onFieldChange={handleFormFieldChange}
       onSubmit={handleFormSubmit}
       onReset={handleFormReset}
-      submitButtonLabel="Save"
-      backButtonPath={`/employees/${employeeId}`}
+      submitButtonLabel="Lưu"
+      backButtonPath={`/management/employees/${employeeId}`}
     />
   );
 }
 
-EmployeeEditForm.propTypes = {
-  initialValues: PropTypes.shape({
-    age: PropTypes.number,
-    isFullTime: PropTypes.bool,
-    joinDate: PropTypes.string,
-    name: PropTypes.string,
-    role: PropTypes.oneOf(['Development', 'Finance', 'Market']),
-  }).isRequired,
-  onSubmit: PropTypes.func.isRequired,
-};
-
-export default function EmployeeEdit() {
+const EmployeeEdit = () => {
   const { employeeId } = useParams();
 
-  const [employee, setEmployee] = React.useState(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  const [employee, setEmployee] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const loadData = React.useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
 
-    try {
-      const showData = await getEmployee(Number(employeeId));
+  useEffect(() => {
 
-      setEmployee(showData);
-    } catch (showDataError) {
-      setError(showDataError);
+
+    const loadData = async () => {
+      setError(null);
+      setIsLoading(true);
+
+      try {
+        const data = await userService.getUser(employeeId);
+        setEmployee(data);
+
+      } catch (showDataError) {
+        setError(showDataError);
+      }
+      setIsLoading(false);
     }
-    setIsLoading(false);
+    loadData();
+
   }, [employeeId]);
 
-  React.useEffect(() => {
-    loadData();
-  }, [loadData]);
 
-  const handleSubmit = React.useCallback(
-    async (formValues) => {
-      const updatedData = await updateEmployee(Number(employeeId), formValues);
+
+  const notifications = useNotifications();
+
+
+
+
+
+
+  const handleSubmit = async (formValues) => {
+    try {
+      const payload = { ...formValues };
+      const updatedData = await userService.updateUser(employeeId, payload);
       setEmployee(updatedData);
-    },
-    [employeeId],
-  );
-
-  const renderEdit = React.useMemo(() => {
-    if (isLoading) {
-      return (
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            m: 1,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      );
+      notifications.show('Cập nhật nhân viên thành công.', { severity: 'success', autoHideDuration: 3000 });
+    } catch (updateError) {
+      notifications.show(`Cập nhật thất bại. Lỗi: ${updateError.message}`, { severity: 'error', autoHideDuration: 3000 });
     }
-    if (error) {
-      return (
-        <Box sx={{ flexGrow: 1 }}>
-          <Alert severity="error">{error.message}</Alert>
-        </Box>
-      );
-    }
+  };
 
-    return employee ? (
-      <EmployeeEditForm initialValues={employee} onSubmit={handleSubmit} />
-    ) : null;
-  }, [isLoading, error, employee, handleSubmit]);
+
+
+
+
+  const displayName = employee?.username ?? employeeId;
+  const pageTitle = `Chỉnh sửa nhân viên ${displayName}`;
+
+
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageContainer
+        title="Lỗi tải nhân viên"
+        breadcrumbs={[
+          { title: 'Nhân viên', path: '/management/employees' },
+          { title: `Nhân viên ${employeeId}`, path: `/management/employees/${employeeId}` },
+          { title: 'Chỉnh sửa' },
+        ]}
+      >
+        <Alert severity="error">Đã xảy ra lỗi khi tải dữ liệu nhân viên: {error.message}</Alert>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
-      title={`Edit Employee ${employeeId}`}
+      title={pageTitle}
       breadcrumbs={[
-        { title: 'Employees', path: '/employees' },
-        { title: `Employee ${employeeId}`, path: `/employees/${employeeId}` },
-        { title: 'Edit' },
+        { title: 'Nhân viên', path: '/management/employees' },
+        { title: `Nhân viên ${displayName}`, path: `/management/employees/${employeeId}` },
+        { title: 'Chỉnh sửa' },
       ]}
     >
-      <Box sx={{ display: 'flex', flex: 1 }}>{renderEdit}</Box>
+      <Box sx={{ display: 'flex', flex: 1 }}>
+        <EmployeeEditForm initialValues={employee} onSubmit={handleSubmit} />
+      </Box>
     </PageContainer>
   );
 }
+export default EmployeeEdit;

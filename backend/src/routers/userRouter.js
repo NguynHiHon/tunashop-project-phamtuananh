@@ -1,11 +1,18 @@
 
 const express = require('express');
 const userController = require('../controllers/userController');
-const middleware = require('../middlewares/authMiddleware');
+const authMiddleWare = require('../middlewares/authMiddleWare');
 
 const router = express.Router();
 
-router.get('/me', middleware.verifyAccessToken, userController.getMe);
-router.get('/', middleware.verifyAccessToken, userController.getAllUsers);
+// authenticated user
+router.get('/me', authMiddleWare.verifyAccessToken, userController.getMe);
+
+// admin CRUD
+router.get('/', authMiddleWare.verifyAdmin, userController.getAllUsers);
+router.post('/', authMiddleWare.verifyAdmin, userController.createUser);
+router.get('/:id', authMiddleWare.verifyAdmin, userController.getUser);
+router.put('/:id', authMiddleWare.verifyAdmin, userController.updateUser);
+router.delete('/:id', authMiddleWare.verifyAdmin, userController.deleteUser);
 
 module.exports = router;

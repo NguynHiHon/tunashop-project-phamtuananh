@@ -12,9 +12,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router';
-import dayjs from 'dayjs';
 import { useDialogs } from '../../hooks/useDialogs/useDialogs';
 import useNotifications from '../../hooks/useNotifications/useNotifications';
+import userService from '../../../../services/userService';
 
 import PageContainer from '../PageContainer';
 
@@ -34,7 +34,7 @@ export default function EmployeeShow() {
     setIsLoading(true);
 
     try {
-      const showData = await getEmployee(Number(employeeId));
+      const showData = await userService.getUser(employeeId);
 
       setEmployee(showData);
     } catch (showDataError) {
@@ -48,7 +48,8 @@ export default function EmployeeShow() {
   }, [loadData]);
 
   const handleEmployeeEdit = React.useCallback(() => {
-    navigate(`/employees/${employeeId}/edit`);
+    // navigate relative to /management
+    navigate(`employees/${employeeId}/edit`);
   }, [navigate, employeeId]);
 
   const handleEmployeeDelete = React.useCallback(async () => {
@@ -57,29 +58,30 @@ export default function EmployeeShow() {
     }
 
     const confirmed = await dialogs.confirm(
-      `Do you wish to delete ${employee.name}?`,
+      `Bạn có muốn xóa ${employee.name}?`,
       {
-        title: `Delete employee?`,
+        title: `Xóa nhân viên?`,
         severity: 'error',
-        okText: 'Delete',
-        cancelText: 'Cancel',
-      },
+        okText: 'Xóa',
+        cancelText: 'Hủy',
+      }
     );
 
     if (confirmed) {
       setIsLoading(true);
       try {
-        await deleteEmployee(Number(employeeId));
+        await userService.deleteUser(employeeId);
 
-        navigate('/employees');
+        // redirect to management employees list
+        navigate('/management/employees');
 
-        notifications.show('Employee deleted successfully.', {
+        notifications.show('Xóa nhân viên thành công.', {
           severity: 'success',
           autoHideDuration: 3000,
         });
       } catch (deleteError) {
         notifications.show(
-          `Failed to delete employee. Reason:' ${deleteError.message}`,
+          `Xóa nhân viên thất bại. Lỗi: ${deleteError.message}`,
           {
             severity: 'error',
             autoHideDuration: 3000,
@@ -91,7 +93,8 @@ export default function EmployeeShow() {
   }, [employee, dialogs, employeeId, navigate, notifications]);
 
   const handleBack = React.useCallback(() => {
-    navigate('/employees');
+    // go back to employees list in management
+    navigate('/management/employees');
   }, [navigate]);
 
   const renderShow = React.useMemo(() => {
@@ -125,31 +128,31 @@ export default function EmployeeShow() {
         <Grid container spacing={2} sx={{ width: '100%' }}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Paper sx={{ px: 2, py: 1 }}>
-              <Typography variant="overline">Name</Typography>
+              <Typography variant="overline">Tên đăng nhập</Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                {employee.name}
+                {employee.username}
               </Typography>
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Paper sx={{ px: 2, py: 1 }}>
-              <Typography variant="overline">Age</Typography>
+              <Typography variant="overline">Email</Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                {employee.age}
+                {employee.email}
               </Typography>
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Paper sx={{ px: 2, py: 1 }}>
-              <Typography variant="overline">Join date</Typography>
+              <Typography variant="overline">Số điện thoại</Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                {dayjs(employee.joinDate).format('MMMM D, YYYY')}
+                {employee.phone || '—'}
               </Typography>
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Paper sx={{ px: 2, py: 1 }}>
-              <Typography variant="overline">Department</Typography>
+              <Typography variant="overline">Vai trò</Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 {employee.role}
               </Typography>
@@ -157,9 +160,9 @@ export default function EmployeeShow() {
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Paper sx={{ px: 2, py: 1 }}>
-              <Typography variant="overline">Full-time</Typography>
+              <Typography variant="overline">Họ và tên</Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                {employee.isFullTime ? 'Yes' : 'No'}
+                {employee.name || '—'}
               </Typography>
             </Paper>
           </Grid>
@@ -202,13 +205,13 @@ export default function EmployeeShow() {
     handleEmployeeDelete,
   ]);
 
-  const pageTitle = `Employee ${employeeId}`;
+  const pageTitle = `Nhân viên ${employeeId}`;
 
   return (
     <PageContainer
       title={pageTitle}
       breadcrumbs={[
-        { title: 'Employees', path: '/employees' },
+        { title: 'Nhân viên', path: '/management/employees' },
         { title: pageTitle },
       ]}
     >

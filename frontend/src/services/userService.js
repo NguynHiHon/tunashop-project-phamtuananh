@@ -45,8 +45,28 @@ const userService = {
 
 
 
+    // Admin CRUD
+    createUser: async (data) => {
+        const res = await axiosJWT.post('/api/users', data);
+        return res.data.data || res.data;
+    },
+
+    getUser: async (id) => {
+        const res = await axiosJWT.get(`/api/users/${id}`);
+        return res.data.data;
+    },
+
+    updateUser: async (id, data) => {
+        const res = await axiosJWT.put(`/api/users/${id}`, data);
+        return res.data.data;
+    },
+
+    deleteUser: async (id) => {
+        const res = await axiosJWT.delete(`/api/users/${id}`);
+        return res.data;
+    }
+
 };
-// Get User Profile (requires accessToken)
 
 export default userService;
 

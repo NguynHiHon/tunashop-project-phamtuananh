@@ -13,7 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useDialogs } from '../../hooks/useDialogs/useDialogs';
 import useNotifications from '../../hooks/useNotifications/useNotifications';
-import userService from '../../../../services/userService/';
+import userService from '../../../../services/userService';
 import { useDispatch, useSelector } from 'react-redux';
 
 import PageContainer from '../PageContainer';
@@ -157,18 +157,18 @@ export default function EmployeeList() {
 
   const handleRowClick = React.useCallback(
     ({ row }) => {
-      navigate(`/employees/${row.id}`);
+      navigate(`/management/employees/${row.id}`);
     },
     [navigate],
   );
 
   const handleCreateClick = React.useCallback(() => {
-    navigate('/employees/new');
+    navigate('/management/employees/new');
   }, [navigate]);
 
   const handleRowEdit = React.useCallback(
     (employee) => () => {
-      navigate(`/employees/${employee.id}/edit`);
+      navigate(`/management/employees/${employee._id}/edit`);
     },
     [navigate],
   );
@@ -176,23 +176,25 @@ export default function EmployeeList() {
   const handleRowDelete = React.useCallback(
     (employee) => async () => {
       const confirmed = await dialogs.confirm(
-        `Do you wish to delete ${employee.name}?`,
+        `Bạn có muốn xóa ${employee.name}?`,
         {
-          title: `Delete employee?`,
+          title: `Xóa nhân viên?`,
           severity: 'error',
-          okText: 'Delete',
-          cancelText: 'Cancel',
+          okText: 'Xóa',
+          cancelText: 'Hủy',
         },
       );
 
       if (confirmed) {
         setIsLoading(true);
         try {
-          // Call delete API
-          notifications.show('Employee deleted successfully.', {
+          await userService.deleteUser(employee._id || employee.id);
+          notifications.show('Xóa nhân viên thành công.', {
             severity: 'success',
             autoHideDuration: 3000,
           });
+          // refresh list
+          await userService.getAllUser(dispatch);
         } catch (deleteError) {
           notifications.show(
             `Failed to delete employee. Reason:' ${deleteError.message}`,
@@ -205,7 +207,7 @@ export default function EmployeeList() {
         setIsLoading(false);
       }
     },
-    [dialogs, notifications,],
+    [dialogs, notifications, dispatch],
   );
 
   const initialState = React.useMemo(
@@ -251,7 +253,7 @@ export default function EmployeeList() {
     [handleRowEdit, handleRowDelete],
   );
 
-  const pageTitle = 'Employees';
+  const pageTitle = 'Nhân viên';
 
   return (
     <PageContainer

@@ -5,10 +5,10 @@ const ReToken_TTL = 30 * 24 * 60 * 60 * 1000;
 
 const authController = {
     signUp: async (req, res) => {
-        let { username, password } = req.body;
+        let { username, password, email, phone, name } = req.body;
         try {
 
-            const user = await authService.signUp(username, password);
+            const user = await authService.signUp({ username, password, email, phone, name });
             return res.status(201).json({ message: 'User registered successfully', user });
 
         } catch (error) {

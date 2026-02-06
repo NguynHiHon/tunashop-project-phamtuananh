@@ -58,7 +58,7 @@ function DashboardSidebar({
 
     setIsFullyExpanded(false);
 
-    return () => {};
+    return () => { };
   }, [expanded, theme.transitions.duration.enteringScreen]);
 
   React.useEffect(() => {
@@ -72,7 +72,7 @@ function DashboardSidebar({
 
     setIsFullyCollapsed(false);
 
-    return () => {};
+    return () => { };
   }, [expanded, theme.transitions.duration.leavingScreen]);
 
   const mini = !disableCollapsibleSidebar && !expanded;
@@ -90,8 +90,8 @@ function DashboardSidebar({
         setExpandedItemIds((previousValue) =>
           previousValue.includes(itemId)
             ? previousValue.filter(
-                (previousValueItemId) => previousValueItemId !== itemId,
-              )
+              (previousValueItemId) => previousValueItemId !== itemId,
+            )
             : [...previousValue, itemId],
         );
       } else if (!isOverSmViewport && !hasNestedNavigation) {
@@ -136,7 +136,7 @@ function DashboardSidebar({
             <DashboardSidebarHeaderItem>Điều khiển </DashboardSidebarHeaderItem>
             <DashboardSidebarPageItem
               id="employees"
-              title="Employees"
+              title="Nhân viên"
               icon={<PersonIcon />}
               href="/employees"
               selected={!!matchPath('/employees/*', pathname) || pathname === '/'}
@@ -178,7 +178,7 @@ function DashboardSidebar({
                 </List>
               }
             />
-              <DashboardSidebarPageItem
+            <DashboardSidebarPageItem
               id="management"
               title="Quản lí"
               icon={<ManageAccountsIcon />}
@@ -210,7 +210,7 @@ function DashboardSidebar({
                     href="/management/accounts"
                     selected={!!matchPath('/management/accounts', pathname)}
                   />
-                 <DashboardSidebarPageItem
+                  <DashboardSidebarPageItem
                     id="products"
                     title="Sản phẩm"
                     icon={<ProductionQuantityLimitsIcon />}
@@ -224,11 +224,11 @@ function DashboardSidebar({
                     href="/management/categories"
                     selected={!!matchPath('/management/categories', pathname)}
                   />
-                 
+
                 </List>
               }
             />
-               <DashboardSidebarPageItem
+            <DashboardSidebarPageItem
               id="activities"
               title="Hoạt động"
               icon={<ActivityIcon />}
@@ -262,7 +262,7 @@ function DashboardSidebar({
                     selected={!!matchPath('/management/activities/warehouse', pathname)}
                   />
 
-                   <DashboardSidebarPageItem
+                  <DashboardSidebarPageItem
                     id="events"
                     title="Sự kiện"
                     icon={<EventIcon />}

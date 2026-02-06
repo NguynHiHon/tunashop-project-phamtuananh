@@ -6,13 +6,15 @@ import ChatBox from '../components/Chat/ChatBox';
 import { axiosPublic } from '../config/axiosPublic';
 import { setAccessToken } from '../redux/clices/tokenSlice';
 import { logout } from '../redux/clices/authSlice';
+import test from 'node:test';
+import { useState } from 'react';
 
 const ChatAppPages = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { isAuthenticated } = useSelector((state) => state.auth);
     const { accessToken } = useSelector((state) => state.token);
-
+    const [test, setTest] = useState(null);
     // Redirect nếu chưa login
     useEffect(() => {
         if (!isAuthenticated) {

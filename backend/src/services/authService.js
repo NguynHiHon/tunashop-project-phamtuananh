@@ -27,16 +27,24 @@ const generateRefreshToken = (user) => {
 }
 
 
+
 const authService = {
-    signUp: async (username, password) => {
+    signUp: async ({ username, password, email, phone, name } = {}) => {
         try {
-            if (!username || !password) {
+            if (!username || !password || (!email && !phone)) {
                 const err = new Error('INVALID_INPUT');
                 err.status = 400;
                 throw err;
             }
-            //chuẩn hóa username lần 1 vì đã có trim và lowercase trong schema nhưng để chắc chắn
             username = String(username).trim().toLowerCase();
+            email = String(email).trim().toLowerCase();
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                const err = new Error('INVALID_EMAIL');
+                err.status = 400;
+                throw err;
+            }
+
             // kiểm tra mật khẩu đủ mạnh và đạt yêu cầu
             if (typeof password !== 'string' || !checkPasswordStrength(password)) {
                 const err = new Error('WEAK_PASSWORD');
@@ -44,7 +52,7 @@ const authService = {
                 throw err;
             }
 
-            const existingUser = await User.findOne({ username });
+            const existingUser = await User.findOne({ $or: [{ username }, { email }] });
             if (existingUser) {
                 const err = new Error('EXISTS');
                 err.status = 409;
@@ -53,7 +61,7 @@ const authService = {
 
             const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 10;
             const hashedPassword = await bcrypt.hash(password, rounds);
-            const newUser = await User.create({ username, password: hashedPassword });
+            const newUser = await User.create({ username, password: hashedPassword, email, phone, name });
 
             const { password: userPassword, ...userWithoutPassword } = newUser._doc;
 

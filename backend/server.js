@@ -8,7 +8,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const socketMiddleware = require('./src/socket/socketMiddleware');
 const initializeChatSocket = require('./src/socket/chatSocket');
-
+const morgan = require('morgan');
 dotenv.config();
 
 const app = express();
@@ -28,6 +28,7 @@ io.use(socketMiddleware);
 
 // Initialize chat socket handlers
 initializeChatSocket(io);
+app.use(morgan('dev'));
 
 // Express middleware
 app.use(cors({
