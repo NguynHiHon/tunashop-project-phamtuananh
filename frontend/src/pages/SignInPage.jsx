@@ -2,7 +2,8 @@ import React from 'react'
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
-import { signInUser } from '../services/authService'
+import { signInUser, googleSignIn } from '../services/authService'
+import { GoogleLogin } from '@react-oauth/google'
 import useNotifications from '../pages/Admin-Management/hooks/useNotifications/useNotifications'
 import {
   Box,
@@ -13,12 +14,14 @@ import {
   Typography,
   Stack,
   Alert,
+  Divider,
 } from '@mui/material'
 
 const SignInPage = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { isFetching, error } = useSelector((state) => state.auth)
+  const { isFetching: googleFetching, error: googleError, errorMessage: googleErrorMessage } = useSelector((state) => state.googleAuth)
   const {
     register,
     handleSubmit,
@@ -31,6 +34,23 @@ const SignInPage = () => {
     } catch (e) {
       console.error('Sign in error:', e)
     }
+  }
+
+  const notifications = useNotifications()
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await googleSignIn(credentialResponse.credential, dispatch, navigate)
+      notifications.show('Đăng nhập Google thành công', { severity: 'success', autoHideDuration: 3000 })
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Đăng nhập Google thất bại'
+      notifications.show(msg, { severity: 'error', autoHideDuration: 5000 })
+      console.error('Google sign in error:', e)
+    }
+  }
+
+  const handleGoogleError = () => {
+    notifications.show('Đăng nhập Google thất bại', { severity: 'error', autoHideDuration: 5000 })
   }
 
   return (
@@ -64,10 +84,23 @@ const SignInPage = () => {
               />
 
               {error && <Alert severity="error">Đăng nhập thất bại</Alert>}
+              {googleError && <Alert severity="error">{googleErrorMessage || 'Đăng nhập Google thất bại'}</Alert>}
 
-              <Button type="submit" variant="contained" disabled={isFetching}>
+              <Button type="submit" variant="contained" disabled={isFetching || googleFetching}>
                 {isFetching ? 'Đang xử lý...' : 'Đăng nhập'}
               </Button>
+
+              <Divider sx={{ my: 1 }}>hoặc</Divider>
+
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text="signin_with"
+                  shape="rectangular"
+                  width="100%"
+                />
+              </Box>
             </Stack>
           </Box>
 

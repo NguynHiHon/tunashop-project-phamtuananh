@@ -95,6 +95,20 @@ class SocketService {
         }
     }
 
+    // Yêu cầu chat với nhân viên support
+    requestSupport() {
+        if (this.socket?.connected) {
+            this.socket.emit('request_support', {});
+        }
+    }
+
+    // Kết thúc chat support
+    endSupportChat(staffId) {
+        if (this.socket?.connected) {
+            this.socket.emit('end_support_chat', { staffId });
+        }
+    }
+
     // ============ LISTEN EVENTS ============
 
     // Nhận tin nhắn mới
@@ -164,6 +178,81 @@ class SocketService {
     onError(callback) {
         if (this.socket) {
             this.socket.on('error', callback);
+        }
+    }
+
+    // Support được phân công
+    onSupportAssigned(callback) {
+        if (this.socket) {
+            this.socket.on('support_assigned', callback);
+        }
+    }
+
+    // Không có support sẵn sàng
+    onSupportUnavailable(callback) {
+        if (this.socket) {
+            this.socket.on('support_unavailable', callback);
+        }
+    }
+
+    // Có chat support mới (cho staff)
+    onNewSupportChat(callback) {
+        if (this.socket) {
+            this.socket.on('new_support_chat', callback);
+        }
+    }
+
+    // Chat support đã kết thúc
+    onSupportChatEnded(callback) {
+        if (this.socket) {
+            this.socket.on('support_chat_ended', callback);
+        }
+    }
+
+    // ============ ORDER NOTIFICATIONS ============
+
+    // Có đơn hàng mới (cho admin)
+    onNewOrder(callback) {
+        if (this.socket) {
+            this.socket.on('new_order', callback);
+        }
+    }
+
+    // Đơn hàng được cập nhật
+    onOrderUpdated(callback) {
+        if (this.socket) {
+            this.socket.on('order_updated', callback);
+        }
+    }
+
+    // Trạng thái đơn hàng thay đổi (cho user)
+    onOrderStatusUpdated(callback) {
+        if (this.socket) {
+            this.socket.on('order_status_updated', callback);
+        }
+    }
+
+    offNewOrder() {
+        if (this.socket) {
+            this.socket.off('new_order');
+        }
+    }
+
+    offOrderUpdated() {
+        if (this.socket) {
+            this.socket.off('order_updated');
+        }
+    }
+
+    offOrderStatusUpdated() {
+        if (this.socket) {
+            this.socket.off('order_status_updated');
+        }
+    }
+
+    offNewSupportChat() {
+        if (this.socket) {
+            this.socket.off('new_support_chat');
         }
     }
 

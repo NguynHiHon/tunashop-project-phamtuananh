@@ -1,4 +1,5 @@
 const chatService = require('../services/chatService');
+const warehouseService = require('../services/warehouseService');
 
 // Map để track online users
 const onlineUsers = new Map(); // userId -> socketId
@@ -18,6 +19,67 @@ const initializeChatSocket = (io) => {
         socket.broadcast.emit('user_online', { userId: userIdString });
 
         // ============ EVENT HANDLERS ============
+
+        // Yêu cầu chat với nhân viên support
+        socket.on('request_support', async (data) => {
+            try {
+                // Lấy nhân viên được phân công
+                const supportStaff = await warehouseService.getAssignedSupportStaff();
+
+                if (!supportStaff) {
+                    return socket.emit('support_unavailable', {
+                        message: 'Hiện tại không có nhân viên hỗ trợ sẵn sàng. Vui lòng thử lại sau.'
+                    });
+                }
+
+                const staffId = supportStaff._id.toString();
+
+                // Tạo hoặc lấy conversation giữa user và staff
+                const conversation = await chatService.findOrCreateConversation(
+                    socket.userId,
+                    staffId
+                );
+
+                // Tăng số chat của nhân viên
+                await warehouseService.incrementChatCount(staffId);
+
+                // Gửi thông tin support staff và conversation cho user
+                socket.emit('support_assigned', {
+                    supportStaff: {
+                        _id: supportStaff._id,
+                        username: supportStaff.username,
+                        name: supportStaff.name,
+                        role: supportStaff.role
+                    },
+                    conversation
+                });
+
+                // Thông báo cho staff có chat mới
+                io.to(staffId).emit('new_support_chat', {
+                    userId: socket.userId,
+                    conversation
+                });
+            } catch (error) {
+                console.error('Error requesting support:', error);
+                socket.emit('error', {
+                    message: error.message,
+                    code: 'REQUEST_SUPPORT_ERROR'
+                });
+            }
+        });
+
+        // Kết thúc chat support (giảm count)
+        socket.on('end_support_chat', async (data) => {
+            try {
+                const { staffId } = data;
+                if (staffId) {
+                    await warehouseService.decrementChatCount(staffId);
+                    socket.emit('support_chat_ended', { staffId });
+                }
+            } catch (error) {
+                console.error('Error ending support chat:', error);
+            }
+        });
 
         // Gửi tin nhắn
         socket.on('send_message', async (data) => {

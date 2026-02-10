@@ -1,80 +1,62 @@
-// Product Service - Chứa các API calls thuần túy
-import { axiosPublic } from '../config/axiosPublic';
 import { axiosJWT } from '../config/axiosJWT';
+import { axiosPublic } from '../config/axiosPublic';
 
-const API_BASE_URL = '/api/products';
+// ============ ADMIN (authenticated) ============
 
-// GET /api/products - Lấy danh sách
-export const getProducts = async (params) => {
-	const response = await axiosPublic.get(API_BASE_URL, { params });
-
-	return response.data;
+export const getProducts = async (params = {}) => {
+    const response = await axiosJWT.get('/api/products', { params });
+    return response.data;
 };
 
-// GET /api/products/:id - Lấy chi tiết một sản phẩm
 export const getProduct = async (id) => {
-	const response = await axiosPublic.get(`${API_BASE_URL}/${id}`);
-	return response.data;
+    const response = await axiosJWT.get(`/api/products/${id}`);
+    return response.data;
 };
 
-// POST /api/products - Tạo sản phẩm mới (data may include images: [url,...] and defaultImageUrl)
 export const createProduct = async (data) => {
-	validateProductPayload(data, { requireRequired: true });
-	const response = await axiosJWT.post(API_BASE_URL, data);
-
-	return response.data;
+    const response = await axiosJWT.post('/api/products', data);
+    return response.data;
 };
 
-// PUT /api/products/:id - Cập nhật sản phẩm (data may include images: [url,...])
 export const updateProduct = async (id, data) => {
-
-	validateProductPayload(data, { requireRequired: false });
-	const response = await axiosJWT.put(`${API_BASE_URL}/${id}`, data);
-	return response.data;
+    const response = await axiosJWT.put(`/api/products/${id}`, data);
+    return response.data;
 };
 
-// DELETE /api/products/:id - Xóa sản phẩm
+export const updateProductSale = async (id, data) => {
+    const response = await axiosJWT.put(`/api/products/${id}/sale`, data);
+    return response.data;
+};
+
 export const deleteProduct = async (id) => {
-	const response = await axiosJWT.delete(`${API_BASE_URL}/${id}`);
-	return response.data;
+    const response = await axiosJWT.delete(`/api/products/${id}`);
+    return response.data;
 };
 
-export const getAllProducts = async () => {
-	const res = await axiosPublic.get(API_BASE_URL);
-	return res.data;
+// ============ PUBLIC ============
+
+export const getAllProducts = async (params = {}) => {
+    const response = await axiosPublic.get('/api/products', { params });
+    return response.data;
 };
 
-export default { getProducts, getProduct, createProduct, updateProduct, deleteProduct, getAllProducts };
+export const getProductTypesPublic = async () => {
+    const response = await axiosPublic.get('/api/product-types/all');
+    return response.data;
+};
 
-// --- Validation helper ---
-function isValidUrl(s) {
-	try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:'; } catch (e) { return false; }
-}
+export const getBrands = async () => {
+    const response = await axiosPublic.get('/api/products/brands');
+    return response.data;
+};
 
-export function validateProductPayload(data = {}, opts = { requireRequired: true }) {
-	const errors = [];
-	if (opts.requireRequired) {
-		if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') errors.push('name is required');
-		if (!data.productTypeId || typeof data.productTypeId !== 'string' || data.productTypeId.trim() === '') errors.push('productTypeId is required');
-		if (data.price === undefined || data.price === null || isNaN(Number(data.price))) errors.push('price is required and must be a number');
-	}
-	if (data.stock !== undefined && (isNaN(Number(data.stock)) || Number(data.stock) < 0)) errors.push('stock must be a non-negative number');
-	if (data.attributes !== undefined) {
-		if (!Array.isArray(data.attributes)) errors.push('attributes must be an array');
-		else data.attributes.forEach((a, idx) => {
-			if (!a || !a.attributeId) errors.push(`attributes[${idx}].attributeId is required`);
-			if (a.value === undefined) errors.push(`attributes[${idx}].value is required`);
-		});
-	}
-	if (data.images !== undefined) {
-		if (!Array.isArray(data.images)) errors.push('images must be an array of URLs');
-		else data.images.forEach((u, idx) => { if (!isValidUrl(u)) errors.push(`images[${idx}] is not a valid URL`); });
-	}
+// ============ VALIDATION ============
 
-	if (errors.length > 0) {
-		const err = new Error('Validation failed');
-		err.details = errors;
-		throw err;
-	}
-}
-
+export const validateProductPayload = (payload) => {
+    const errors = [];
+    if (!payload.name || !payload.name.trim()) errors.push('Tên sản phẩm là bắt buộc');
+    if (!payload.productTypeId) errors.push('Loại sản phẩm là bắt buộc');
+    if (payload.price === undefined || payload.price === '' || isNaN(Number(payload.price))) errors.push('Giá phải là số hợp lệ');
+    if (payload.stock !== undefined && (isNaN(Number(payload.stock)) || Number(payload.stock) < 0)) errors.push('Số lượng tồn kho phải >= 0');
+    return errors;
+};

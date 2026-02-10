@@ -39,7 +39,6 @@ export default function ProductList() {
       const res = await dispatch(fetchProducts()).unwrap();
       const productItems = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
       const rows = productItems.map(p => ({ id: p._id || p.id, ...p }));
-      console.debug('Loaded products rows:', rows.map(r => ({ id: r.id, name: r.name }))); // debug: help track wrong id mapping
       setRowsState({ rows, rowCount: productItems.length });
     } catch (err) {
       notifications.show(`Failed to load products. ${err.message || ''}`, { severity: 'error' });
@@ -99,7 +98,7 @@ export default function ProductList() {
       headerName: 'Điều chỉnh',
       type: 'actions',
       getActions: ({ row }) => [
-        <GridActionsCellItem key="edit" icon={<EditIcon />} label="Edit" onClick={() => { console.debug('Edit clicked for row', { id: row._id || row.id, name: row.name }); navigate(`/management/products/${row._id || row.id}/edit`); }} />,
+        <GridActionsCellItem key="edit" icon={<EditIcon />} label="Edit" onClick={() => { navigate(`/management/products/${row._id || row.id}/edit`); }} />,
         <GridActionsCellItem key="delete" icon={<DeleteIcon />} label="Delete" onClick={handleRowDelete(row)} />,
       ]
     }

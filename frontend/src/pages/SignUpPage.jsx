@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
-import { signUpUser } from '../services/authService'
+import { signUpUser, googleSignIn } from '../services/authService'
+import { GoogleLogin } from '@react-oauth/google'
 import useNotifications from '../pages/Admin-Management/hooks/useNotifications/useNotifications'
 import {
   Box,
@@ -12,12 +13,14 @@ import {
   Typography,
   Stack,
   Alert,
+  Divider,
 } from '@mui/material'
 
 const SignUpPage = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { register: registerState } = useSelector((state) => state.auth)
+  const { isFetching: googleFetching } = useSelector((state) => state.googleAuth)
   const {
     register,
     handleSubmit,
@@ -93,9 +96,31 @@ const SignUpPage = () => {
 
               {registerState.error && <Alert severity="error">Đăng ký thất bại</Alert>}
 
-              <Button type="submit" variant="contained" disabled={registerState.isFetching}>
+              <Button type="submit" variant="contained" disabled={registerState.isFetching || googleFetching}>
                 {registerState.isFetching ? 'Đang xử lý...' : 'Đăng ký'}
               </Button>
+
+              <Divider sx={{ my: 1 }}>hoặc</Divider>
+
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      await googleSignIn(credentialResponse.credential, dispatch, navigate)
+                      notifications.show('Đăng ký bằng Google thành công', { severity: 'success', autoHideDuration: 3000 })
+                    } catch (e) {
+                      const msg = e?.response?.data?.message || 'Đăng ký Google thất bại'
+                      notifications.show(msg, { severity: 'error', autoHideDuration: 5000 })
+                    }
+                  }}
+                  onError={() => {
+                    notifications.show('Đăng ký Google thất bại', { severity: 'error', autoHideDuration: 5000 })
+                  }}
+                  text="signup_with"
+                  shape="rectangular"
+                  width="100%"
+                />
+              </Box>
             </Stack>
           </Box>
 

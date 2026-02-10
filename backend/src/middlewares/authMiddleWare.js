@@ -21,7 +21,6 @@ const authMiddleWare = {
                     return res.status(404).json({ message: 'Người dùng không tồn tại' });
                 }
                 req.user = user; // Gắn thông tin người dùng vào đối tượng req
-                console.log('User authenticated:', user);
                 next(); // Tiếp tục đến middleware hoặc route handler tiếp theo
             });
         }

@@ -58,6 +58,8 @@ export default function ProductImagePicker({ files, setFiles, imageUrls, setImag
     return found?.file?.name || '';
   };
 
+
+
   return (
     <Box>
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFiles} />
@@ -66,7 +68,7 @@ export default function ProductImagePicker({ files, setFiles, imageUrls, setImag
         <Typography variant="body2" sx={{ color: 'text.secondary', ml: 1 }}>{files.length} tệp đã chọn — Ảnh sẽ được tải lên khi nhấn Lưu.</Typography>
       </Box>
 
-      <Box sx={{ overflowX: 'auto', py: 1 }}>
+      <Box sx={{ overflowX: 'auto', overflowY: 'hidden', py: 1 }}>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
           {imageUrls.map(img => (
             <Box key={img.id} sx={{ width: 160, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>

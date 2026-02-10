@@ -83,7 +83,26 @@ const authController = {
             let message = error.message || 'INTERNAL_SERVER_ERROR';
             return res.status(status).json({ message });
         }
-    }
+    },
+
+    // Google Sign In
+    googleSignIn: async (req, res) => {
+        const { credential } = req.body;
+        try {
+            const { user, refreshToken } = await authService.googleSignIn(credential);
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: ReToken_TTL,
+            });
+            return res.status(200).json({ message: 'Google sign in successfully', user });
+        } catch (error) {
+            const status = error.status || 500;
+            let message = error.message || 'INTERNAL_SERVER_ERROR';
+            return res.status(status).json({ message });
+        }
+    },
 };
 
 module.exports = authController;

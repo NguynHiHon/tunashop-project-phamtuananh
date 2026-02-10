@@ -8,8 +8,13 @@ const userSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
-    password: { type: String, required: true },
+    password: { type: String },
     role: { type: String, enum: ['user', 'staff', 'admin'], default: 'user' },
+
+    // Google OAuth fields
+    googleId: { type: String, unique: true, sparse: true },
+    avatar: { type: String },
+    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
 
     // Contact fields
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },

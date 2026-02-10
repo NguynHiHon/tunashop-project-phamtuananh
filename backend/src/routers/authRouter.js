@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.post('/signup', authController.signUp);
 router.post('/signin', authController.signIn);
+router.post('/google', authController.googleSignIn);
 router.post('/signoutsession', authController.signOutSession);
 router.post('/refresh-token', authController.refreshToken);
 

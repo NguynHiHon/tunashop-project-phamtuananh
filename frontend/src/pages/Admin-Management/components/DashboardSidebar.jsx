@@ -11,6 +11,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LayersIcon from '@mui/icons-material/Layers';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ArticleIcon from '@mui/icons-material/Article';
 import { matchPath, useLocation } from 'react-router';
 import DashboardSidebarContext from '../context/DashboardSidebarContext';
 import { DRAWER_WIDTH, MINI_DRAWER_WIDTH } from '../constants';
@@ -20,7 +22,7 @@ import DashboardSidebarDividerItem from './DashboardSidebarDividerItem';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ProductionQuantityLimitsIcon from '@mui/icons-material/ProductionQuantityLimits';
 import CategoryIcon from '@mui/icons-material/Category';
-import { Money } from '@mui/icons-material';
+import { Money, Chat as ChatIcon } from '@mui/icons-material';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import EventIcon from '@mui/icons-material/Event';
 import {
@@ -135,14 +137,21 @@ function DashboardSidebar({
           >
             <DashboardSidebarHeaderItem>Điều khiển </DashboardSidebarHeaderItem>
             <DashboardSidebarPageItem
-              id="employees"
-              title="Nhân viên"
-              icon={<PersonIcon />}
-              href="/employees"
-              selected={!!matchPath('/employees/*', pathname) || pathname === '/'}
+              id="dashboard"
+              title="Tổng quan"
+              icon={<DashboardIcon />}
+              href="/management"
+              selected={pathname === '/management' || pathname === '/management/'}
             />
             <DashboardSidebarDividerItem />
             <DashboardSidebarHeaderItem> Danh mục quản lí</DashboardSidebarHeaderItem>
+            <DashboardSidebarPageItem
+              id="articles"
+              title="Bài viết"
+              icon={<ArticleIcon />}
+              href="/management/articles"
+              selected={!!matchPath('/management/articles', pathname)}
+            />
             <DashboardSidebarPageItem
               id="reports"
               title="Báo cáo"
@@ -224,6 +233,20 @@ function DashboardSidebar({
                     href="/management/categories"
                     selected={!!matchPath('/management/categories', pathname)}
                   />
+                  <DashboardSidebarPageItem
+                    id="warehouse"
+                    title="Quản lý kho"
+                    icon={<WarehouseIcon />}
+                    href="/management/warehouse"
+                    selected={!!matchPath('/management/warehouse', pathname)}
+                  />
+                  <DashboardSidebarPageItem
+                    id="support-chat"
+                    title="Chat hỗ trợ"
+                    icon={<ChatIcon />}
+                    href="/management/support-chat"
+                    selected={!!matchPath('/management/support-chat', pathname)}
+                  />
 
                 </List>
               }
@@ -250,8 +273,8 @@ function DashboardSidebar({
                     id="orders"
                     title="Đơn hàng"
                     icon={<ListOrderedIcon />}
-                    href="/management/activities/orders"
-                    selected={!!matchPath('/management/activities/orders', pathname)}
+                    href="/management/orders"
+                    selected={!!matchPath('/management/orders', pathname)}
                   />
 
                   <DashboardSidebarPageItem

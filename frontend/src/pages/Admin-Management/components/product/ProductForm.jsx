@@ -8,22 +8,44 @@ import Grid from '@mui/material/GridLegacy';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
-import IconButton from '@mui/material/IconButton';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
-import DeleteIcon from '@mui/icons-material/Delete';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import useNotifications from '../../hooks/useNotifications/useNotifications';
 import { getAllProductTypes, getProductType } from '../../../../services/categoryService';
+import { getBrands } from '../../../../services/productService';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import Stack from '@mui/material/Stack';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import Divider from '@mui/material/Divider';
 import ProductImagePicker from './ProductImagePicker';
+import VariantManager from './VariantManager';
 import Chip from '@mui/material/Chip';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
-export default function ProductForm({ initial = {}, onSubmit }) {
+const DEFAULT_INITIAL = {};
+
+/* Quill toolbar modules */
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ align: [] }],
+    ['blockquote'],
+    ['link', 'image'],
+    ['clean'],
+  ],
+};
+
+const QUILL_FORMATS = [
+  'header', 'bold', 'italic', 'underline', 'strike',
+  'color', 'background', 'list', 'align',
+  'blockquote', 'link', 'image',
+];
+
+export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
   const notif = useNotifications();
   const navigate = useNavigate();
 
@@ -38,6 +60,12 @@ export default function ProductForm({ initial = {}, onSubmit }) {
   const [attributes, setAttributes] = useState(initial.attributes || []);
   const [description, setDescription] = useState(initial.description || '');
   const [warranty, setWarranty] = useState(initial.warranty || '');
+  const [brand, setBrand] = useState(initial.brand || '');
+  const [brandOptions, setBrandOptions] = useState([]);
+
+  // Variant support
+  const [hasVariants, setHasVariants] = useState(initial.hasVariants || false);
+  const [variants, setVariants] = useState(initial.variants || []);
 
   const [files, setFiles] = useState([]);
   // imageUrls is an array of objects: { id, src, local?: boolean }
@@ -95,7 +123,14 @@ export default function ProductForm({ initial = {}, onSubmit }) {
         const res = await getAllProductTypes();
         setProductTypes(Array.isArray(res) ? res : res.data || []);
       } catch (err) {
-        notif.ahow('Failed to load product types. ' + (err.message || ''), { severity: 'error' });
+        notif.show('Failed to load product types. ' + (err.message || ''), { severity: 'error' });
+      }
+      try {
+        const bRes = await getBrands();
+        setBrandOptions(Array.isArray(bRes) ? bRes : bRes.data || []);
+      } catch (err) {
+        console.error('Failed to load brands, using default list.', err);
+        setBrandOptions(['Victor', 'Yonex', 'Li-Ning', 'Mizuno', 'Kumbo', 'Acer']);
       }
     })();
   }, []);
@@ -111,16 +146,18 @@ export default function ProductForm({ initial = {}, onSubmit }) {
       try {
         const res = await getProductType(productTypeId);
         const pt = res && (res.data || res);
-        const attrs = (pt?.listAttributeIds || []).map(attr => ({
-          attributeId: attr._id,
-          name: attr.name_vi || attr.name,
-          type: attr.type,
-          options: (attr.options || []).map(opt => {
-            if (opt && typeof opt === 'object') return String(opt.value ?? opt._id ?? JSON.stringify(opt));
-            return String(opt);
-          }),
-          value: ''
-        }));
+        const attrs = (pt?.listAttributeIds || [])
+          .filter(attr => attr.name?.toLowerCase() !== 'brand') // brand is a separate field now
+          .map(attr => ({
+            attributeId: attr._id,
+            name: attr.name_vi || attr.name,
+            type: attr.type,
+            options: (attr.options || []).map(opt => {
+              if (opt && typeof opt === 'object') return String(opt.value ?? opt._id ?? JSON.stringify(opt));
+              return String(opt);
+            }),
+            value: ''
+          }));
 
         // if editing and initial attributes provided, populate values (normalize to string)
         if (initial.attributes && initial.attributes.length) {
@@ -186,7 +223,11 @@ export default function ProductForm({ initial = {}, onSubmit }) {
     setName(initial.name || '');
     setPrice(initial.price ?? '');
     setStock(initial.stock ?? 0);
-    setAttributes(initial.attributes || []);
+    setBrand(initial.brand || '');
+    setHasVariants(initial.hasVariants || false);
+    setVariants(initial.variants || []);
+    // Don't set attributes here — the productTypeId effect handles building
+    // proper attribute objects with name/type/options and populating values from initial
     setDescription(initial.description || '');
     setWarranty(initial.warranty || '');
     const ptid = initial.productTypeId ? (typeof initial.productTypeId === 'string' ? initial.productTypeId : (initial.productTypeId._id || '')) : '';
@@ -308,10 +349,13 @@ export default function ProductForm({ initial = {}, onSubmit }) {
 
     const payload = {
       name: name.trim(),
+      brand: brand.trim(),
       price: Number(price),
-      stock: Number(stock),
+      stock: hasVariants ? variants.reduce((sum, v) => sum + (v.stock || 0), 0) : Number(stock),
       productTypeId: productTypeId.trim(),
       attributes: attributes.map(a => ({ attributeId: a.attributeId, value: a.value })),
+      hasVariants,
+      variants: variants, // Always keep variants, just toggle hasVariants flag
       description: description.trim(),
       warranty: warranty ? warranty.trim() : undefined,
       images: finalImgs.map(p => p.src),
@@ -327,7 +371,6 @@ export default function ProductForm({ initial = {}, onSubmit }) {
         imagesCount: Array.isArray(payload.images) ? payload.images.length : 0,
         defaultImageUrl: payload.defaultImageUrl ? (String(payload.defaultImageUrl).slice(0, 120) + (String(payload.defaultImageUrl).length > 120 ? '...' : '')) : null,
       };
-      console.debug('Product payload before submit (summary):', safePayloadSummary);
 
       // Basic check to reject clearly invalid image content (e.g., HTML returned in place of a URL)
       const badImage = (payload.images || []).find(i => (typeof i === 'string') && (/^\s*</.test(i)));
@@ -360,113 +403,179 @@ export default function ProductForm({ initial = {}, onSubmit }) {
 
 
   return (
-    <Paper sx={{ p: 3 }} component="form" onSubmit={handleSubmit}>
-      <Typography variant="h6" gutterBottom>Sản phẩm</Typography>
+    <Box component="form" onSubmit={handleSubmit}>
+      {/* ── Section 1: Basic Info ── */}
+      <Paper sx={{ p: 3, mb: 2.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#333' }}>
+          Thông tin cơ bản
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField label="Tên sản phẩm" fullWidth value={name} onChange={e => setName(e.target.value)} error={!!errors.name} helperText={errors.name} required />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth error={!!errors.productTypeId}>
+              <InputLabel id="product-type-label">Loại sản phẩm *</InputLabel>
+              <Select
+                labelId="product-type-label"
+                value={productTypeId}
+                onChange={(e) => setProductTypeId(e.target.value)}
+                label="Loại sản phẩm *"
+              >
+                <MenuItem value="">-- Chọn --</MenuItem>
+                {productTypes && productTypes.map(pt => (
+                  <MenuItem key={pt._id} value={pt._id}>{pt.name}</MenuItem>
+                ))}
+              </Select>
+              {errors.productTypeId && <FormHelperText>{errors.productTypeId}</FormHelperText>}
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="brand-label">Thương hiệu</InputLabel>
+              <Select
+                labelId="brand-label"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                label="Thương hiệu"
+              >
+                <MenuItem value="">-- Chọn --</MenuItem>
+                {brandOptions.map(b => (
+                  <MenuItem key={b} value={b}>{b}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <TextField label="Giá (VNĐ)" type="number" fullWidth value={price} onChange={e => setPrice(e.target.value)} error={!!errors.price} helperText={errors.price} required />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <TextField
+              label={hasVariants ? "Tổng tồn kho" : "Tồn kho"}
+              type="number"
+              fullWidth
+              value={hasVariants ? variants.reduce((sum, v) => sum + (v.stock || 0), 0) : stock}
+              onChange={e => setStock(e.target.value)}
+              disabled={hasVariants}
+              helperText={hasVariants ? "Tự động tính từ số lượng biến thể" : ""}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
 
-      <Grid container spacing={2}>
-        {/* Row 1: Name | Price | Stock | Product Type */}
-        <Grid item xs={12} md={4}>
-          <TextField label="Tên" fullWidth value={name} onChange={e => setName(e.target.value)} error={!!errors.name} helperText={errors.name} required />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <TextField label="Giá" type="number" fullWidth value={price} onChange={e => setPrice(e.target.value)} error={!!errors.price} helperText={errors.price} required />
-        </Grid>
-        <Grid item xs={6} md={2}>
-          <TextField label="Tồn kho" type="number" fullWidth value={stock} onChange={e => setStock(e.target.value)} />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Select
-            fullWidth
-            value={productTypeId}
-            onChange={(e) => setProductTypeId(e.target.value)}
-            displayEmpty
-            error={!!errors.productTypeId}
-          >
-            <MenuItem value="">Chọn loại sản phẩm</MenuItem>
-            {productTypes && productTypes.map(pt => (
-              <MenuItem key={pt._id} value={pt._id}>{pt.name}</MenuItem>
-            ))}
-          </Select>
-          {errors.productTypeId && <FormHelperText error>{errors.productTypeId}</FormHelperText>}
-        </Grid>
+      {/* ── Section 2: Images ── */}
+      <Paper sx={{ p: 3, mb: 2.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#333' }}>
+          Hình ảnh sản phẩm
+        </Typography>
+        <ProductImagePicker
+          files={files}
+          setFiles={setFiles}
+          imageUrls={imageUrls}
+          setImageUrls={setImageUrls}
+          defaultUrl={defaultUrl}
+          setDefaultUrl={setDefaultUrl}
+          imageStatuses={imageStatuses}
+          retryUpload={retryUpload}
+        />
+        {Object.values(imageStatuses).some(s => s === 'failed') && (
+          <Box sx={{ mt: 1.5 }}>
+            <Button size="small" variant="outlined" color="warning" onClick={retryAllFailed}>Thử lại ảnh lỗi</Button>
+          </Box>
+        )}
+        {files.length > 0 && (
+          <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {files.map(f => <Chip key={f.previewId} label={f.file?.name || f.name || 'file'} size="small" variant="outlined" />)}
+          </Box>
+        )}
+      </Paper>
 
-        {/* Row 2: Images uploader + previews */}
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      {/* ── Section 3: Variants (Size/Color) ── */}
+      <Paper sx={{ p: 3, mb: 2.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#333' }}>
+          Biến thể sản phẩm
+        </Typography>
+        <VariantManager
+          variants={variants}
+          onChange={setVariants}
+          hasVariants={hasVariants}
+          onToggleVariants={setHasVariants}
+        />
+      </Paper>
 
-            <Box sx={{ flex: '1 1 auto' }}>
-              <ProductImagePicker
-                files={files}
-                setFiles={setFiles}
-                imageUrls={imageUrls}
-                setImageUrls={setImageUrls}
-                defaultUrl={defaultUrl}
-                setDefaultUrl={setDefaultUrl}
-                imageStatuses={imageStatuses}
-                retryUpload={retryUpload}
+      {/* ── Section 4: Description & Warranty ── */}
+      <Paper sx={{ p: 3, mb: 2.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#333' }}>
+          Mô tả & Bảo hành
+        </Typography>
+        <Grid container spacing={2}>
+
+          <Grid item xs={12} md={12}>
+            <TextField label="Bảo hành" fullWidth value={warranty} onChange={e => setWarranty(e.target.value)} placeholder="VD: 12 tháng" />
+          </Grid>
+          <Grid item xs={12} md={12}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Mô tả sản phẩm</Typography>
+            <Box sx={{
+              '& .ql-container': { minHeight: 200, fontSize: '0.95rem' },
+              '& .ql-editor': { minHeight: 200 },
+              '& .ql-toolbar': { borderRadius: '8px 8px 0 0', bgcolor: '#fafafa' },
+              '& .ql-container.ql-snow': { borderRadius: '0 0 8px 8px' },
+            }}>
+              <ReactQuill
+                theme="snow"
+                value={description}
+                onChange={setDescription}
+                modules={QUILL_MODULES}
+                formats={QUILL_FORMATS}
+                placeholder="Nhập mô tả sản phẩm (hỗ trợ in đậm, in nghiêng, chèn ảnh...)"
               />
             </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {Object.values(imageStatuses).some(s => s === 'failed') && (
-                <Button size="small" variant="outlined" onClick={retryAllFailed}>Thử lại tất cả</Button>
-              )}
-            </Box>
-
-
-            {/* Fallback: list pending file names as chips so user always sees selected files */}
-            {files.length > 0 && (
-              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {files.map(f => <Chip key={f.previewId} label={f.file?.name || f.name || 'file'} size="small" />)}
-              </Box>
-            )}
-
-
-          </Box>
-        </Grid>
-
-        {/* Row 3: Description & Warranty (on one row) */}
-        <Grid item xs={12} container spacing={2}>
-          <Grid item xs={12} md={8}>
-            <TextField label="Mô tả" fullWidth multiline rows={4} value={description} onChange={e => setDescription(e.target.value)} />
           </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField label="Bảo hành" fullWidth value={warranty} onChange={e => setWarranty(e.target.value)} />
-          </Grid>
+
         </Grid>
+      </Paper>
 
-        {/* Row 5: Attributes (horizontal) */}
-        <Grid item xs={12}>
-          <Typography variant="subtitle1">Thuộc tính</Typography>
-
-          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', py: 1 }}>
+      {/* ── Section 4: Attributes (only shown when a product type is selected and has attrs) ── */}
+      {attributes.length > 0 && (
+        <Paper sx={{ p: 3, mb: 2.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#333' }}>
+            Thuộc tính
+          </Typography>
+          <Grid container spacing={2}>
             {attributes.map((a) => (
-              <Box key={a.attributeId} sx={{ minWidth: 240, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 600 }}>{a.name}</Typography>
+              <Grid item xs={12} sm={6} md={4} lg={3} key={a.attributeId}>
                 {a.type === 'select' ? (
-                  <Select value={a.value || ''} onChange={(e) => handleChangeAttributeValue(a.attributeId, e.target.value)} size="small">
-                    <MenuItem value="">-- select --</MenuItem>
-                    {a.options && a.options.map(opt => {
-                      const optValue = (typeof opt === 'object') ? (opt.value ?? opt._id ?? JSON.stringify(opt)) : String(opt);
-                      const optLabel = (typeof opt === 'object') ? (opt.label ?? opt.name ?? optValue) : opt;
-                      return (<MenuItem key={optValue} value={optValue}>{optLabel}</MenuItem>);
-                    })}
-                  </Select>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>{a.name}</InputLabel>
+                    <Select
+                      value={a.value || ''}
+                      onChange={(e) => handleChangeAttributeValue(a.attributeId, e.target.value)}
+                      label={a.name}
+                    >
+                      <MenuItem value="">-- Chọn --</MenuItem>
+                      {a.options && a.options.map(opt => {
+                        const optValue = (typeof opt === 'object') ? (opt.value ?? opt._id ?? JSON.stringify(opt)) : String(opt);
+                        const optLabel = (typeof opt === 'object') ? (opt.label ?? opt.name ?? optValue) : opt;
+                        return (<MenuItem key={optValue} value={optValue}>{optLabel}</MenuItem>);
+                      })}
+                    </Select>
+                  </FormControl>
                 ) : (
-                  <TextField size="small" value={a.value || ''} onChange={(e) => handleChangeAttributeValue(a.attributeId, e.target.value)} />
+                  <TextField label={a.name} size="small" fullWidth value={a.value || ''} onChange={(e) => handleChangeAttributeValue(a.attributeId, e.target.value)} />
                 )}
-              </Box>
+              </Grid>
             ))}
-          </Box>
+          </Grid>
+        </Paper>
+      )}
 
-        </Grid>
-
-        {/* Row 6: actions */}
-        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button variant="outlined" onClick={() => navigate('/management/products')}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={uploading}>{uploading ? <CircularProgress size={18} /> : 'Save'}</Button>
-        </Grid>
-      </Grid>
-    </Paper>
+      {/* ── Actions ── */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
+        <Button variant="outlined" onClick={() => navigate('/management/products')} sx={{ minWidth: 100 }}>Hủy</Button>
+        <Button type="submit" variant="contained" disabled={uploading} sx={{ minWidth: 120 }}>
+          {uploading ? <CircularProgress size={20} /> : 'Lưu sản phẩm'}
+        </Button>
+      </Box>
+    </Box>
   );
 }

@@ -36,6 +36,15 @@ export const updateProduct = createAsyncThunk('product/updateProduct', async ({ 
   }
 });
 
+export const updateProductSale = createAsyncThunk('product/updateProductSale', async ({ id, data }, { rejectWithValue }) => {
+  try {
+    return await productService.updateProductSale(id, data);
+  } catch (err) {
+    const payload = err.response?.data || (err.details ? { message: err.message || 'Validation failed', details: err.details } : { message: err.message || err });
+    return rejectWithValue(payload);
+  }
+});
+
 export const deleteProduct = createAsyncThunk('product/deleteProduct', async (id, { rejectWithValue }) => {
   try {
     return await productService.deleteProduct(id);
@@ -79,6 +88,10 @@ const productSlice = createSlice({
       .addCase(updateProduct.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(updateProduct.fulfilled, (state, action) => { state.loading = false; const updated = action.payload.data || action.payload; if (updated) state.items = state.items.map(i => i._id === updated._id ? updated : i); })
       .addCase(updateProduct.rejected, (state, action) => { state.loading = false; state.error = action.payload || action.error; })
+
+      .addCase(updateProductSale.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(updateProductSale.fulfilled, (state, action) => { state.loading = false; const updated = action.payload.data || action.payload; if (updated) state.items = state.items.map(i => i._id === updated._id ? updated : i); })
+      .addCase(updateProductSale.rejected, (state, action) => { state.loading = false; state.error = action.payload || action.error; })
 
       .addCase(deleteProduct.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(deleteProduct.fulfilled, (state, action) => { state.loading = false; })

@@ -1,4 +1,5 @@
 const chatService = require('../services/chatService');
+const { getIO } = require('../socket/socketUtils');
 
 const chatController = {
     // Tạo hoặc lấy conversation
@@ -19,6 +20,15 @@ const chatController = {
                 currentUserId,
                 receiverId
             );
+
+            // Emit new_support_chat to receiver (staff) if this is a new chat
+            const io = getIO();
+            if (io) {
+                io.to(receiverId).emit('new_support_chat', {
+                    userId: currentUserId.toString(),
+                    conversation
+                });
+            }
 
             res.status(200).json({
                 message: 'Lấy conversation thành công',

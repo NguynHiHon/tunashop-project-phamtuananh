@@ -12,6 +12,7 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import Stack from '@mui/material/Stack';
 import { Link } from 'react-router';
 import ThemeSwitcher from './ThemeSwitcher';
+import OrderNotificationBadge from './OrderNotificationBadge';
 
 const AppBar = styled(MuiAppBar)(({ theme }) => ({
   borderWidth: 0,
@@ -104,7 +105,8 @@ function DashboardHeader({ logo, title, menuOpen, onToggleMenu }) {
             spacing={1}
             sx={{ marginLeft: 'auto' }}
           >
-            <Stack direction="row" alignItems="center">
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <OrderNotificationBadge />
               <ThemeSwitcher />
             </Stack>
           </Stack>

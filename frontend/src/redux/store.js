@@ -16,6 +16,9 @@ import userReducer from './clices/userSlice';
 import chatReducer from './clices/chatSlice';
 import categoryReducer from './clices/categorySlice';
 import productReducer from './clices/productSlice';
+import googleAuthReducer from './clices/googleAuthSlice';
+import cartReducer from './clices/cartSlice';
+import orderReducer from './clices/orderSlice';
 
 // Cấu hình persist - CHỈ PERSIST AUTH (user info + login status)
 const authPersistConfig = {
@@ -33,7 +36,10 @@ export const store = configureStore({
         user: userReducer,            // Không persist - profile sẽ fetch lại khi cần
         chat: chatReducer,            // Không persist - chat sẽ fetch lại khi cần
         category: categoryReducer,    // Không persist - category sẽ fetch lại khi cần
-            product: productReducer,
+        product: productReducer,
+        googleAuth: googleAuthReducer, // Không persist - state Google OAuth
+        cart: cartReducer,            // Không persist - cart sẽ fetch lại khi cần
+        order: orderReducer,          // Không persist - order sẽ fetch lại khi cần
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

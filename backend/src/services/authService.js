@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/Users');
 const Session = require('../models/Session');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 
 const checkPasswordStrength = (password) => {
     // Kiểm tra độ dài tối thiểu
@@ -177,7 +178,98 @@ const authService = {
         } catch (error) {
             throw error;
         }
-    }
+    },
+
+    // Google Sign In / Sign Up
+    googleSignIn: async (idToken) => {
+        try {
+            if (!idToken) {
+                const err = new Error('GOOGLE_TOKEN_REQUIRED');
+                err.status = 400;
+                throw err;
+            }
+
+            // Verify Google ID Token
+            const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+            const ticket = await client.verifyIdToken({
+                idToken,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            const payload = ticket.getPayload();
+            const { sub: googleId, email, name, picture } = payload;
+
+            if (!email) {
+                const err = new Error('GOOGLE_EMAIL_REQUIRED');
+                err.status = 400;
+                throw err;
+            }
+
+            // Tìm user theo googleId hoặc email
+            let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+            if (user) {
+                // User đã tồn tại → liên kết googleId nếu chưa có
+                if (!user.googleId) {
+                    user.googleId = googleId;
+                    user.authProvider = user.authProvider === 'local' ? 'local' : 'google';
+                    if (!user.avatar && picture) user.avatar = picture;
+                    if (!user.name && name) user.name = name;
+                    await user.save();
+                }
+            } else {
+                // Tạo user mới từ Google
+                const username = email.split('@')[0] + '_gg';
+                // Kiểm tra username trùng
+                const existingUsername = await User.findOne({ username });
+                const finalUsername = existingUsername
+                    ? username + '_' + Date.now().toString(36)
+                    : username;
+
+                user = await User.create({
+                    username: finalUsername,
+                    email,
+                    name: name || finalUsername,
+                    avatar: picture || '',
+                    googleId,
+                    authProvider: 'google',
+                });
+            }
+
+            // Tạo tokens
+            const refreshToken = generateRefreshToken(user);
+            const accessToken = generateAccessToken(user);
+
+            // Tạo session
+            await Session.create({
+                userId: user._id,
+                refreshToken: refreshToken,
+                expireAt: new Date(Date.now() + ReToken_TTL),
+            });
+
+            // Giới hạn session
+            const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS) || 3;
+            const sessions = await Session.find({ userId: user._id }).sort({ createdAt: -1 });
+            if (sessions.length > MAX_SESSIONS) {
+                const idsToRemove = sessions.slice(MAX_SESSIONS).map((s) => s._id);
+                await Session.deleteMany({ _id: { $in: idsToRemove } });
+            }
+
+            const { password: userPassword, ...userWithoutPassword } = user._doc;
+            const userWithTokens = {
+                ...userWithoutPassword,
+                accessToken,
+            };
+
+            return { user: userWithTokens, refreshToken };
+        } catch (error) {
+            if (error.message?.includes('Token used too late') || error.message?.includes('Invalid token')) {
+                const err = new Error('INVALID_GOOGLE_TOKEN');
+                err.status = 401;
+                throw err;
+            }
+            throw error;
+        }
+    },
 };
 
 module.exports = authService;

@@ -9,6 +9,11 @@ import {
     logout
 } from '../redux/clices/authSlice';
 import { setAccessToken, clearToken } from '../redux/clices/tokenSlice';
+import {
+    googleLoginStart,
+    googleLoginSuccess,
+    googleLoginFailure,
+} from '../redux/clices/googleAuthSlice';
 
 // Sign In
 export const signInUser = async (user, dispatch, navigate) => {
@@ -77,6 +82,39 @@ export const refreshAccessToken = async (dispatch) => {
     } catch (error) {
         dispatch(logout());
         dispatch(clearToken());
+        throw error;
+    }
+};
+
+// Google Sign In
+export const googleSignIn = async (credential, dispatch, navigate) => {
+    dispatch(googleLoginStart());
+    try {
+        const res = await axiosPublic.post('/api/auth/google', { credential });
+
+        // Dispatch user info vào authSlice (giống signIn thường)
+        const userWithoutToken = { ...res.data.user };
+        delete userWithoutToken.accessToken;
+        dispatch(loginSuccess({ user: userWithoutToken }));
+
+        // Dispatch accessToken vào tokenSlice
+        dispatch(setAccessToken(res.data.user.accessToken));
+
+        // Đánh dấu google login thành công
+        dispatch(googleLoginSuccess());
+
+        // Điều hướng theo role
+        if (res.data.user.role === 'admin') {
+            navigate('/admin/dashboard');
+        } else {
+            navigate('/');
+        }
+
+        return res.data;
+    } catch (error) {
+        const msg = error?.response?.data?.message || error?.message || 'Đăng nhập Google thất bại';
+        dispatch(googleLoginFailure(msg));
+        dispatch(loginFailure());
         throw error;
     }
 };
