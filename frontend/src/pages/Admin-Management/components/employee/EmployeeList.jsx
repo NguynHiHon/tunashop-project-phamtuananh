@@ -9,6 +9,7 @@ import { DataGrid, GridActionsCellItem, gridClasses } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useDialogs } from '../../hooks/useDialogs/useDialogs';
@@ -117,7 +118,8 @@ export default function EmployeeList() {
     (async () => {
       setIsLoading(true);
       try {
-        await userService.getAllUser(dispatch); // hoặc .then(...)
+        // load only staff & admin for employees page
+        await userService.getAllUser(dispatch, { roles: 'staff,admin' });
         if (mounted) setError(null);
       } catch (err) {
         if (mounted) setError(err);
@@ -142,7 +144,7 @@ export default function EmployeeList() {
       (async () => {
         setIsLoading(true);
         try {
-          const res = await userService.getAllUser(dispatch);
+          const res = await userService.getAllUser(dispatch, { roles: 'staff,admin' });
           const rows = Array.isArray(res) ? res : (res?.users ?? []);
           setRowsState({ rows, rowCount: rows.length });
           setError(null);
@@ -235,6 +237,12 @@ export default function EmployeeList() {
         flex: 1,
         align: 'right',
         getActions: ({ row }) => [
+          <GridActionsCellItem
+            key="view-item"
+            icon={<VisibilityIcon />}
+            label="View"
+            onClick={() => navigate(`/management/employees/${row._id || row.id}`)}
+          />,
           <GridActionsCellItem
             key="edit-item"
             icon={<EditIcon />}

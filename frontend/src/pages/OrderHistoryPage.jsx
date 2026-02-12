@@ -418,6 +418,8 @@ const OrderHistoryPage = () => {
                                                         />
                                                     </ListItemAvatar>
                                                     <ListItemText
+                                                        primaryTypographyProps={{ component: 'div' }}
+                                                        secondaryTypographyProps={{ component: 'div' }}
                                                         primary={
                                                             <Box>
                                                                 <Typography fontWeight="500">{item.productName}</Typography>
@@ -445,12 +447,13 @@ const OrderHistoryPage = () => {
                                                         }
                                                         secondary={
                                                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
-                                                                <Typography variant="body2" color="primary">
+                                                                <Typography component="span" variant="body2" color="primary">
                                                                     {formatPrice(item.finalPrice)}
                                                                 </Typography>
                                                                 {item.salePercent > 0 && (
                                                                     <>
                                                                         <Typography
+                                                                            component="span"
                                                                             variant="body2"
                                                                             sx={{ textDecoration: 'line-through', color: 'text.secondary' }}
                                                                         >
@@ -459,7 +462,7 @@ const OrderHistoryPage = () => {
                                                                         <Chip label={`-${item.salePercent}%`} size="small" color="error" />
                                                                     </>
                                                                 )}
-                                                                <Typography variant="body2" color="text.secondary">
+                                                                <Typography component="span" variant="body2" color="text.secondary">
                                                                     x{item.quantity}
                                                                 </Typography>
                                                             </Box>

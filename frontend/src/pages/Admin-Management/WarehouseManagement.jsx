@@ -91,6 +91,7 @@ const initialFormData = {
     ward: '',
     mapUrl: '',
     notes: '',
+    social: { facebook: '', instagram: '', youtube: '' },
     chatAssignmentStrategy: 'least-busy',
     workingHours: {
         monday: { open: '08:00', close: '18:00', isOpen: true },
@@ -136,8 +137,7 @@ export default function WarehouseManagement() {
                     district: data.district || '',
                     ward: data.ward || '',
                     mapUrl: data.mapUrl || '',
-                    notes: data.notes || '',
-                    chatAssignmentStrategy: data.chatAssignmentStrategy || 'least-busy',
+                    notes: data.notes || '', social: data.social || { facebook: '', instagram: '', youtube: '' }, chatAssignmentStrategy: data.chatAssignmentStrategy || 'least-busy',
                     workingHours: data.workingHours || initialFormData.workingHours,
                 });
                 setSupportStaff(data.supportStaff || []);
@@ -205,6 +205,14 @@ export default function WarehouseManagement() {
         }
     };
 
+    // Helper to normalize id
+    const _idStr = (v) => {
+        if (!v && v !== 0) return '';
+        if (typeof v === 'string') return v;
+        if (v._id) return String(v._id);
+        return String(v);
+    };
+
     // Add support staff
     const handleAddStaff = async () => {
         if (!selectedStaffToAdd) return;
@@ -212,47 +220,67 @@ export default function WarehouseManagement() {
         try {
             const response = await warehouseService.addSupportStaff(selectedStaffToAdd, newStaffOptions);
             if (response.status === 'success') {
-                setSupportStaff(response.data.supportStaff || []);
+                const updated = response.data || {};
+                setSupportStaff(updated.supportStaff || []);
                 setAddStaffDialog(false);
                 setSelectedStaffToAdd('');
                 setNewStaffOptions({ isActive: true, priority: 0, maxConcurrentChats: 10 });
-                fetchAvailableStaff();
+                await fetchAvailableStaff();
                 showSnackbar('Đã thêm nhân viên hỗ trợ');
             }
         } catch (error) {
             console.error('Error adding staff:', error);
-            showSnackbar(error.response?.data?.message || 'Lỗi khi thêm nhân viên', 'error');
+            showSnackbar(error.response?.data?.message || error.message || 'Lỗi khi thêm nhân viên', 'error');
         }
     };
 
-    // Remove support staff
+    // Remove support staff (optimistic update)
     const handleRemoveStaff = async (userId) => {
         if (!window.confirm('Bạn có chắc muốn xóa nhân viên này khỏi danh sách hỗ trợ?')) return;
 
+        const id = _idStr(userId);
+        const prev = supportStaff;
+        setSupportStaff(prev.filter(s => _idStr(s.userId) !== id));
+
         try {
-            const response = await warehouseService.removeSupportStaff(userId);
+            const response = await warehouseService.removeSupportStaff(id);
             if (response.status === 'success') {
-                setSupportStaff(response.data.supportStaff || []);
-                fetchAvailableStaff();
+                const updated = response.data || {};
+                setSupportStaff(updated.supportStaff || []);
+                await fetchAvailableStaff();
                 showSnackbar('Đã xóa nhân viên khỏi danh sách');
+            } else {
+                // revert
+                setSupportStaff(prev);
+                showSnackbar('Không thể xóa nhân viên', 'error');
             }
         } catch (error) {
             console.error('Error removing staff:', error);
-            showSnackbar('Lỗi khi xóa nhân viên', 'error');
+            setSupportStaff(prev); // revert
+            showSnackbar(error.response?.data?.message || 'Lỗi khi xóa nhân viên', 'error');
         }
     };
 
-    // Toggle staff active status
+    // Toggle staff active status (optimistic)
     const handleToggleStaffActive = async (userId, currentStatus) => {
+        const id = _idStr(userId);
+        const prev = supportStaff;
+        setSupportStaff(prev.map(s => (_idStr(s.userId) === id ? { ...s, isActive: !currentStatus } : s)));
+
         try {
-            const response = await warehouseService.updateStaffStatus(userId, { isActive: !currentStatus });
+            const response = await warehouseService.updateStaffStatus(id, { isActive: !currentStatus });
             if (response.status === 'success') {
-                setSupportStaff(response.data.supportStaff || []);
+                const updated = response.data || {};
+                setSupportStaff(updated.supportStaff || []);
                 showSnackbar(`Đã ${!currentStatus ? 'bật' : 'tắt'} trạng thái làm việc`);
+            } else {
+                setSupportStaff(prev);
+                showSnackbar('Không thể cập nhật trạng thái', 'error');
             }
         } catch (error) {
             console.error('Error toggling staff status:', error);
-            showSnackbar('Lỗi khi cập nhật trạng thái', 'error');
+            setSupportStaff(prev);
+            showSnackbar(error.response?.data?.message || 'Lỗi khi cập nhật trạng thái', 'error');
         }
     };
 
@@ -397,6 +425,37 @@ export default function WarehouseManagement() {
                                 onChange={handleInputChange}
                             />
                         </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Facebook URL"
+                                name="social.facebook"
+                                placeholder="https://www.facebook.com/yourpage"
+                                value={formData.social?.facebook || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, social: { ...prev.social, facebook: e.target.value } }))}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Instagram URL"
+                                name="social.instagram"
+                                placeholder="https://www.instagram.com/yourhandle"
+                                value={formData.social?.instagram || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, social: { ...prev.social, instagram: e.target.value } }))}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="YouTube URL"
+                                name="social.youtube"
+                                placeholder="https://www.youtube.com/channel/..."
+                                value={formData.social?.youtube || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, social: { ...prev.social, youtube: e.target.value } }))}
+                            />
+                        </Grid>
+
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
@@ -406,6 +465,32 @@ export default function WarehouseManagement() {
                                 onChange={handleInputChange}
                                 placeholder="https://www.google.com/maps/embed?..."
                             />
+                            {/* Map preview or helpful hint */}
+                            {formData.mapUrl && (
+                                (() => {
+                                    const isEmbed = /\/maps\/embed/.test(formData.mapUrl);
+                                    if (isEmbed) {
+                                        return (
+                                            <Box sx={{ mt: 2 }}>
+                                                <iframe
+                                                    title="warehouse-map"
+                                                    src={formData.mapUrl}
+                                                    width="100%"
+                                                    height={300}
+                                                    style={{ border: 0 }}
+                                                    loading="lazy"
+                                                />
+                                            </Box>
+                                        );
+                                    }
+                                    return (
+                                        <Alert severity="warning" sx={{ mt: 2 }}>
+                                            URL không phải dạng embed. <Button size="small" variant="outlined" href={formData.mapUrl} target="_blank" sx={{ ml: 1 }}>Mở trên Google Maps</Button>
+                                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Để xem bản đồ trong trang quản lý, bấm nút 'Chia sẻ' trên Google Maps → Chọn 'Nhúng bản đồ' → sao chép URL embed và dán vào đây.</Typography>
+                                        </Alert>
+                                    );
+                                })()
+                            )}
                         </Grid>
                         <Grid item xs={12}>
                             <TextField

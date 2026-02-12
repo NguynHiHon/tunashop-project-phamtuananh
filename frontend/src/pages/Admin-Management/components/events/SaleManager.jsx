@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -25,21 +25,7 @@ import { fetchProducts, updateProductSale } from '../../../../redux/clices/produ
 
 const INITIAL_PAGE_SIZE = 10;
 
-const toDateTimeLocalValue = (value) => {
-    if (!value) return '';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '';
-    // Keep to yyyy-MM-ddTHH:mm for input[type=datetime-local]
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16);
-};
-
-const toISOStringOrNull = (value) => {
-    if (!value) return undefined;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
-};
+// Scheduling: reintroduce saleStartAt / saleEndAt editing
 
 const sanitizePercentInput = (raw) => {
     if (raw === '' || raw === null || raw === undefined) return '';
@@ -47,6 +33,23 @@ const sanitizePercentInput = (raw) => {
     if (onlyDigits === '') return '';
     const num = Math.min(100, Number(onlyDigits));
     return Number.isNaN(num) ? '' : String(num);
+};
+
+// Convert `YYYY-MM-DDTHH:mm` (datetime-local) to ISO string or null
+const datetimeLocalToISOString = (v) => {
+    if (!v) return null;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+};
+
+// Convert ISO string to `YYYY-MM-DDTHH:mm` for input[type=datetime-local]
+const isoToDateTimeLocal = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 export default function SaleManager() {
@@ -61,11 +64,13 @@ export default function SaleManager() {
     const [filterText, setFilterText] = useState('');
     const [edits, setEdits] = useState({}); // id -> sale fields
 
-    useEffect(() => {
-        loadData();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Ref to always have latest edits (for use in handlers that may have stale closure)
+    const editsRef = React.useRef(edits);
+    React.useEffect(() => {
+        editsRef.current = edits;
+    }, [edits]);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await dispatch(fetchProducts()).unwrap();
@@ -76,17 +81,22 @@ export default function SaleManager() {
             rows.forEach((r) => {
                 mappedEdits[r.id] = {
                     salePercent: r.salePercent ?? 0,
-                    saleStartAt: r.saleStartAt || '',
-                    saleEndAt: r.saleEndAt || '',
+                    saleStartAt: isoToDateTimeLocal(r.saleStartAt),
+                    saleEndAt: isoToDateTimeLocal(r.saleEndAt),
                 };
             });
             setEdits(mappedEdits);
+            editsRef.current = mappedEdits;
         } catch (err) {
             notifications.show(`Không tải được sản phẩm. ${err?.message || ''}`, { severity: 'error' });
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [dispatch, notifications]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     // Keep rowsState synced when store items change
     useEffect(() => {
@@ -97,11 +107,12 @@ export default function SaleManager() {
         rows.forEach((r) => {
             mappedEdits[r.id] = {
                 salePercent: r.salePercent ?? 0,
-                saleStartAt: r.saleStartAt || '',
-                saleEndAt: r.saleEndAt || '',
+                saleStartAt: isoToDateTimeLocal(r.saleStartAt),
+                saleEndAt: isoToDateTimeLocal(r.saleEndAt),
             };
         });
         setEdits(mappedEdits);
+        editsRef.current = mappedEdits;
     }, [items]);
 
     const visibleRows = useMemo(() => {
@@ -110,19 +121,22 @@ export default function SaleManager() {
         return rowsState.rows.filter((r) => (r.name || '').toLowerCase().includes(keyword));
     }, [filterText, rowsState.rows]);
 
-    const handleEditChange = (id, field) => (event) => {
+    const handleEditChange = useCallback((id, field) => (event) => {
         let value = event.target.value;
         if (field === 'salePercent') {
             value = sanitizePercentInput(value);
         }
-        setEdits((prev) => ({
-            ...prev,
-            [id]: { ...prev[id], [field]: value },
-        }));
-    };
+        // for datetime-local we accept the raw value ("YYYY-MM-DDTHH:mm")
+        setEdits((prev) => {
+            const newEdits = { ...prev, [id]: { ...prev[id], [field]: value } };
+            editsRef.current = newEdits; // Update ref immediately
+            return newEdits;
+        });
+    }, []);
 
-    const handleApply = (row) => async () => {
-        const current = edits[row.id] || {};
+    const handleApply = useCallback((row) => async () => {
+        // Use editsRef to get latest value (in case blur just updated state)
+        const current = editsRef.current[row.id] || {};
         setSavingId(row.id);
         try {
             const pct = current.salePercent === '' ? 0 : Number(current.salePercent);
@@ -137,13 +151,17 @@ export default function SaleManager() {
                 return;
             }
 
+            const currentStart = current.saleStartAt || '';
+            const currentEnd = current.saleEndAt || '';
+            const dataToSend = {
+                salePercent: pct,
+                saleStartAt: datetimeLocalToISOString(currentStart),
+                saleEndAt: datetimeLocalToISOString(currentEnd),
+            };
+
             await dispatch(updateProductSale({
                 id: row.id,
-                data: {
-                    salePercent: pct,
-                    saleStartAt: toISOStringOrNull(current.saleStartAt),
-                    saleEndAt: toISOStringOrNull(current.saleEndAt),
-                },
+                data: dataToSend,
             })).unwrap();
             notifications.show('Đã cập nhật sale', { severity: 'success' });
             loadData();
@@ -153,17 +171,17 @@ export default function SaleManager() {
         } finally {
             setSavingId(null);
         }
-    };
+    }, [dispatch, notifications, loadData]);
 
-    const handleClear = (row) => async () => {
+    const handleClear = useCallback((row) => async () => {
         setSavingId(row.id);
         try {
             await dispatch(updateProductSale({
                 id: row.id,
                 data: {
                     salePercent: 0,
-                    saleStartAt: undefined,
-                    saleEndAt: undefined,
+                    saleStartAt: null,
+                    saleEndAt: null,
                 },
             })).unwrap();
             notifications.show('Đã xoá sale', { severity: 'success' });
@@ -174,9 +192,9 @@ export default function SaleManager() {
         } finally {
             setSavingId(null);
         }
-    };
+    }, [dispatch, notifications, loadData]);
 
-    const columns = [
+    const columns = useMemo(() => ([
         {
             field: 'defaultImage',
             headerName: 'Sản phẩm',
@@ -187,6 +205,8 @@ export default function SaleManager() {
                 const img = row.defaultImageId;
                 const src = img?.url_Image || img?.secure_url || img?.url;
                 const isOnSale = !!row.isOnSale;
+                const saleStatus = row.saleStatus || 'none'; // 'none', 'scheduled', 'active', 'expired'
+                const hasSalePercent = (Number(row.salePercent) || 0) > 0;
                 return (
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1 }}>
                         <Box
@@ -198,7 +218,7 @@ export default function SaleManager() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                border: isOnSale ? '2px solid #e53935' : '1px solid #eee',
+                                border: isOnSale ? '2px solid #e53935' : hasSalePercent && saleStatus === 'scheduled' ? '2px solid #ff9800' : '1px solid #eee',
                                 position: 'relative',
                                 overflow: 'hidden',
                             }}
@@ -224,6 +244,42 @@ export default function SaleManager() {
                                     }}
                                 >
                                     SALE
+                                </Box>
+                            )}
+                            {hasSalePercent && saleStatus === 'scheduled' && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        bgcolor: '#ff9800',
+                                        color: '#fff',
+                                        px: 0.5,
+                                        py: 0.2,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        borderBottomLeftRadius: 4,
+                                    }}
+                                >
+                                    ĐÃ LÊN LỊCH
+                                </Box>
+                            )}
+                            {hasSalePercent && saleStatus === 'expired' && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        bgcolor: '#9e9e9e',
+                                        color: '#fff',
+                                        px: 0.5,
+                                        py: 0.2,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        borderBottomLeftRadius: 4,
+                                    }}
+                                >
+                                    HẾT HẠN
                                 </Box>
                             )}
                         </Box>
@@ -258,7 +314,7 @@ export default function SaleManager() {
             headerName: 'Giảm giá',
             width: 140,
             renderCell: (params) => {
-                const edit = edits[params.row.id] || {};
+                const edit = editsRef.current[params.row.id] || {};
                 const hasValue = Number(edit.salePercent) > 0;
                 return (
                     <TextField
@@ -287,16 +343,16 @@ export default function SaleManager() {
             width: 200,
             sortable: false,
             renderCell: (params) => {
-                const edit = edits[params.row.id] || {};
+                const edit = editsRef.current[params.row.id] || {};
+                const value = edit.saleStartAt ?? isoToDateTimeLocal(params.row.saleStartAt);
                 return (
                     <TextField
                         size="small"
                         type="datetime-local"
-                        InputLabelProps={{ shrink: true }}
-                        value={toDateTimeLocalValue(edit.saleStartAt)}
+                        value={value}
                         onChange={handleEditChange(params.row.id, 'saleStartAt')}
-                        fullWidth
-                        sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem' } }}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 200 }}
                     />
                 );
             },
@@ -307,16 +363,16 @@ export default function SaleManager() {
             width: 200,
             sortable: false,
             renderCell: (params) => {
-                const edit = edits[params.row.id] || {};
+                const edit = editsRef.current[params.row.id] || {};
+                const value = edit.saleEndAt ?? isoToDateTimeLocal(params.row.saleEndAt);
                 return (
                     <TextField
                         size="small"
                         type="datetime-local"
-                        InputLabelProps={{ shrink: true }}
-                        value={toDateTimeLocalValue(edit.saleEndAt)}
+                        value={value}
                         onChange={handleEditChange(params.row.id, 'saleEndAt')}
-                        fullWidth
-                        sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem' } }}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ width: 200 }}
                     />
                 );
             },
@@ -330,6 +386,8 @@ export default function SaleManager() {
                 const finalPrice = row.finalPrice ?? row.price ?? 0;
                 const onSale = !!row.isOnSale;
                 const discount = row.salePercent || 0;
+                const saleStatus = row.saleStatus || 'none';
+                const hasSalePercent = discount > 0;
                 return (
                     <Stack spacing={0.3}>
                         <Typography variant="body1" fontWeight={700} sx={{ color: onSale ? '#e53935' : 'inherit' }}>
@@ -344,6 +402,20 @@ export default function SaleManager() {
                                 />
                                 <LocalFireDepartmentIcon sx={{ fontSize: 14, color: '#ff9800' }} />
                             </Stack>
+                        )}
+                        {hasSalePercent && saleStatus === 'scheduled' && (
+                            <Chip
+                                size="small"
+                                label={`-${discount}% (chờ)`}
+                                sx={{ bgcolor: '#fff3e0', color: '#ff9800', fontWeight: 700, fontSize: '0.7rem', height: 20 }}
+                            />
+                        )}
+                        {hasSalePercent && saleStatus === 'expired' && (
+                            <Chip
+                                size="small"
+                                label={`-${discount}% (hết hạn)`}
+                                sx={{ bgcolor: '#eeeeee', color: '#9e9e9e', fontWeight: 700, fontSize: '0.7rem', height: 20 }}
+                            />
                         )}
                     </Stack>
                 );
@@ -386,18 +458,23 @@ export default function SaleManager() {
                 );
             },
         },
-    ];
+    ]), [handleApply, handleClear, handleEditChange, isLoading, loading, savingId]);
 
     const pageTitle = 'Quản lí Sale sản phẩm';
 
     // Calculate stats
     const stats = useMemo(() => {
-        const total = rowsState.rows.length;
-        const onSale = rowsState.rows.filter((r) => r.isOnSale).length;
-        const scheduled = rowsState.rows.filter((r) => {
-            const pct = r.salePercent || 0;
-            const start = r.saleStartAt ? new Date(r.saleStartAt) : null;
-            return pct > 0 && start && start > new Date();
+        const rows = rowsState?.rows || [];
+        const total = rows.length;
+        const now = Date.now();
+        const onSale = rows.filter((r) => r.isOnSale).length;
+        const scheduled = rows.filter((r) => {
+            if (r.saleStatus) return r.saleStatus === 'scheduled';
+            const pct = Number(r.salePercent) || 0;
+            if (pct <= 0) return false;
+            if (!r.saleStartAt) return false;
+            const start = new Date(r.saleStartAt);
+            return !isNaN(start.getTime()) && start.getTime() > now;
         }).length;
         return { total, onSale, scheduled };
     }, [rowsState.rows]);

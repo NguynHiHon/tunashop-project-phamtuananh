@@ -50,11 +50,24 @@ const ProductSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
+// Helper to check if date is within sale window
+function isWithinSaleWindow(saleStartAt, saleEndAt) {
+    const now = new Date();
+    // If saleStartAt exists and is a valid date, check if now >= startDate
+    // If saleStartAt doesn't exist or is invalid, consider it as "started immediately"
+    const startDate = saleStartAt ? new Date(saleStartAt) : null;
+    const endDate = saleEndAt ? new Date(saleEndAt) : null;
+
+    const startOk = !startDate || isNaN(startDate.getTime()) || startDate.getTime() <= now.getTime();
+    const endOk = !endDate || isNaN(endDate.getTime()) || endDate.getTime() >= now.getTime();
+
+    return startOk && endOk;
+}
+
 // Final price considering sale window, percent/absolute discount
 ProductSchema.virtual('finalPrice').get(function () {
-    const now = new Date();
     const { price, salePercent, saleStartAt, saleEndAt } = this;
-    const inWindow = (!saleStartAt || saleStartAt <= now) && (!saleEndAt || saleEndAt >= now);
+    const inWindow = isWithinSaleWindow(saleStartAt, saleEndAt);
     if (!inWindow) return price;
 
     const pct = Number(salePercent) || 0;
@@ -66,11 +79,29 @@ ProductSchema.virtual('finalPrice').get(function () {
 });
 
 ProductSchema.virtual('isOnSale').get(function () {
-    const now = new Date();
     const { salePercent, saleStartAt, saleEndAt } = this;
     const hasValue = (Number(salePercent) || 0) > 0;
     if (!hasValue) return false;
-    return (!saleStartAt || saleStartAt <= now) && (!saleEndAt || saleEndAt >= now);
+    return isWithinSaleWindow(saleStartAt, saleEndAt);
+});
+
+// Sale status for debugging/display purposes
+ProductSchema.virtual('saleStatus').get(function () {
+    const { salePercent, saleStartAt, saleEndAt } = this;
+    const hasValue = (Number(salePercent) || 0) > 0;
+    if (!hasValue) return 'none';
+
+    const now = new Date();
+    const startDate = saleStartAt ? new Date(saleStartAt) : null;
+    const endDate = saleEndAt ? new Date(saleEndAt) : null;
+
+    if (startDate && !isNaN(startDate.getTime()) && startDate.getTime() > now.getTime()) {
+        return 'scheduled'; // Sale is scheduled for the future
+    }
+    if (endDate && !isNaN(endDate.getTime()) && endDate.getTime() < now.getTime()) {
+        return 'expired'; // Sale has ended
+    }
+    return 'active'; // Sale is currently active
 });
 
 // Virtual for total stock (sum of all variant stocks if hasVariants, else stock field)

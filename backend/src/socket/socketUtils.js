@@ -31,7 +31,7 @@ const emitNewOrder = async (order) => {
         total: order.total,
         createdAt: order.createdAt,
     };
-    
+
     console.log('Emitting new_order event:', orderData);
     io.emit('new_order', orderData);
 };

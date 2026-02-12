@@ -7,6 +7,7 @@ const router = express.Router();
 
 // authenticated user
 router.get('/me', authMiddleWare.verifyAccessToken, userController.getMe);
+router.put('/me', authMiddleWare.verifyAccessToken, userController.updateMe);
 
 // admin CRUD
 router.get('/', authMiddleWare.verifyAdmin, userController.getAllUsers);

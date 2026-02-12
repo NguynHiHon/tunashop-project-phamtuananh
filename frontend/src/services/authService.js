@@ -9,6 +9,8 @@ import {
     logout
 } from '../redux/clices/authSlice';
 import { setAccessToken, clearToken } from '../redux/clices/tokenSlice';
+import { clearUserProfile } from '../redux/clices/userSlice';
+import { resetCart } from '../redux/clices/cartSlice';
 import {
     googleLoginStart,
     googleLoginSuccess,
@@ -63,12 +65,16 @@ export const signOutUser = async (dispatch, navigate) => {
         await axiosPublic.post('/api/auth/signOut');
         dispatch(logout());
         dispatch(clearToken());
+        dispatch(clearUserProfile());
+        dispatch(resetCart());
         navigate('/');
     } catch (error) {
         // Ngay cả khi API call thất bại, vẫn logout ở frontend
         console.error("SignOut API call failed:", error);
         dispatch(logout());
         dispatch(clearToken());
+        dispatch(clearUserProfile());
+        dispatch(resetCart());
         navigate('/');
     }
 };
@@ -82,6 +88,8 @@ export const refreshAccessToken = async (dispatch) => {
     } catch (error) {
         dispatch(logout());
         dispatch(clearToken());
+        dispatch(clearUserProfile());
+        dispatch(resetCart());
         throw error;
     }
 };

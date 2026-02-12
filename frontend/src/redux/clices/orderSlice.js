@@ -40,9 +40,9 @@ export const fetchOrderById = createAsyncThunk(
 
 export const cancelOrder = createAsyncThunk(
     'order/cancelOrder',
-    async ({ id, reason }, { rejectWithValue }) => {
+    async ({ orderId, reason }, { rejectWithValue }) => {
         try {
-            const response = await orderService.cancelOrder(id, reason);
+            const response = await orderService.cancelOrder(orderId, reason);
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || 'Không thể hủy đơn hàng');

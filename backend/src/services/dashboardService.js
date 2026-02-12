@@ -32,10 +32,25 @@ const getOverviewStats = async () => {
         ProductType.countDocuments(),
 
         // Products on sale (currently active)
+        // Consider saleStartAt/saleEndAt optional: if not provided, treat as unbounded
         Product.countDocuments({
             salePercent: { $gt: 0 },
-            saleStartAt: { $lte: new Date() },
-            saleEndAt: { $gte: new Date() }
+            $and: [
+                {
+                    $or: [
+                        { saleStartAt: { $exists: false } },
+                        { saleStartAt: null },
+                        { saleStartAt: { $lte: new Date() } },
+                    ]
+                },
+                {
+                    $or: [
+                        { saleEndAt: { $exists: false } },
+                        { saleEndAt: null },
+                        { saleEndAt: { $gte: new Date() } },
+                    ]
+                }
+            ]
         }),
 
         // Low stock products (<=5 items)

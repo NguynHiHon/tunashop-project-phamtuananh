@@ -174,7 +174,7 @@ export default function EmployeeShow() {
             startIcon={<ArrowBackIcon />}
             onClick={handleBack}
           >
-            Back
+            Quay lại
           </Button>
           <Stack direction="row" spacing={2}>
             <Button
@@ -182,7 +182,7 @@ export default function EmployeeShow() {
               startIcon={<EditIcon />}
               onClick={handleEmployeeEdit}
             >
-              Edit
+              Chỉnh sửa
             </Button>
             <Button
               variant="contained"
@@ -190,7 +190,7 @@ export default function EmployeeShow() {
               startIcon={<DeleteIcon />}
               onClick={handleEmployeeDelete}
             >
-              Delete
+              Xóa
             </Button>
           </Stack>
         </Stack>
@@ -205,7 +205,7 @@ export default function EmployeeShow() {
     handleEmployeeDelete,
   ]);
 
-  const pageTitle = `Nhân viên ${employeeId}`;
+  const pageTitle = employee?.name ? `Chi tiết: ${employee.name}` : `Chi tiết nhân viên ${employeeId}`;
 
   return (
     <PageContainer

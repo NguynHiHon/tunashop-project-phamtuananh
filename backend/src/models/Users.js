@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     phone: { type: String, trim: true },
     name: { type: String, trim: true },
+    fullName: { type: String, trim: true },
+    address: { type: String, trim: true },
+
+    // Account state for admin actions
+    state: { type: String, enum: ['active', 'banned', 'suspended'], default: 'active' },
 }, { timestamps: true })
 
 module.exports = mongoose.model('User', userSchema);

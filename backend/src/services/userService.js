@@ -32,9 +32,16 @@ const userService = {
         }
     },
 
-    getAllUsers: async () => {
+    getAllUsers: async (filter = {}) => {
         try {
-            const users = await User.find().select('-password');
+            const query = {};
+            if (filter.roles) {
+                // roles may be an array or comma-separated string
+                const roles = Array.isArray(filter.roles) ? filter.roles : String(filter.roles).split(',').map(s => s.trim());
+                query.role = { $in: roles };
+            }
+            if (filter.state) query.state = filter.state;
+            const users = await User.find(query).select('-password');
             return users;
         } catch (error) {
             throw error;
@@ -184,6 +191,17 @@ const userService = {
                 user.role = role;
             }
 
+            // allow updating account state (active, banned, suspended)
+            if (data.state !== undefined) {
+                const allowedStates = ['active', 'banned', 'suspended'];
+                if (!allowedStates.includes(data.state)) {
+                    const err = new Error('INVALID_STATE');
+                    err.status = 400;
+                    throw err;
+                }
+                user.state = data.state;
+            }
+
             if (name !== undefined) user.name = name;
 
             await user.save();
@@ -206,6 +224,66 @@ const userService = {
             await Session.deleteMany({ userId: user._id });
             await User.findByIdAndDelete(id);
             return { message: 'User deleted' };
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // Update own profile (for authenticated users)
+    updateMe: async (userId, data) => {
+        try {
+            const { fullName, phone, address, avatar, currentPassword, newPassword, newPasswordConfirm } = data;
+            const user = await User.findById(userId);
+            if (!user) {
+                const err = new Error('USER_NOT_FOUND');
+                err.status = 404;
+                throw err;
+            }
+
+            // Update allowed fields
+            if (fullName !== undefined) user.fullName = fullName;
+            if (address !== undefined) user.address = address;
+            if (avatar !== undefined) user.avatar = avatar;
+
+            if (phone !== undefined) {
+                if (phone && !PHONE_REGEX.test(phone)) {
+                    const err = new Error('INVALID_PHONE');
+                    err.status = 400;
+                    throw err;
+                }
+                user.phone = phone;
+            }
+
+            // Change password if provided
+            if (newPassword) {
+                if (!currentPassword) {
+                    const err = new Error('CURRENT_PASSWORD_REQUIRED');
+                    err.status = 400;
+                    throw err;
+                }
+                const isMatch = await bcrypt.compare(currentPassword, user.password);
+                if (!isMatch) {
+                    const err = new Error('INCORRECT_PASSWORD');
+                    err.status = 400;
+                    throw err;
+                }
+                if (!newPasswordConfirm || newPassword !== newPasswordConfirm) {
+                    const err = new Error('PASSWORD_MISMATCH');
+                    err.status = 400;
+                    throw err;
+                }
+                if (!checkPasswordStrength(newPassword)) {
+                    const err = new Error('WEAK_PASSWORD');
+                    err.status = 400;
+                    throw err;
+                }
+                const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 10;
+                user.password = await bcrypt.hash(newPassword, rounds);
+            }
+
+            await user.save();
+            const { password: _p, ...userWithoutPassword } = user._doc;
+            return userWithoutPassword;
         } catch (error) {
             throw error;
         }

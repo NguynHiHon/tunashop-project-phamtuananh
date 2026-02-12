@@ -48,8 +48,12 @@ import ArticleManagement from './pages/Admin-Management/ArticleManagement'
 import SalesReportPage from './pages/Admin-Management/SalesReportPage'
 import WarehouseManagement from './pages/Admin-Management/WarehouseManagement'
 import SupportChatManagement from './pages/Admin-Management/SupportChatManagement'
+import ContactRequests from './pages/Admin-Management/ContactRequests'
+import Accounts from './pages/Admin-Management/Accounts'
 import MainLayout from './components/Home/MainLayout'
 import NotificationsProvider from './pages/Admin-Management/hooks/useNotifications/NotificationsProvider'
+import ContactPage from './pages/ContactPage'
+import ProtectedRoute, { AdminRoute, StaffRoute, AuthRoute, GuestRoute } from './components/ProtectedRoute'
 
 // Setup axios interceptors once
 setupJwtInterceptors(store)
@@ -109,33 +113,149 @@ function App() {
       <NotificationsProvider>
         <Router>
           <Routes>
-            {/* Admin Management Routes (no header/footer) */}
-            <Route path='/management' element={<CrudDashboard />}>
+            {/* Admin Management Routes - Protected by role */}
+            <Route
+              path='/management'
+              element={
+                <StaffRoute redirectTo='/'>
+                  <CrudDashboard />
+                </StaffRoute>
+              }
+            >
+              {/* Dashboard - Admin & Staff */}
               <Route index element={<DashboardPage />} />
-              <Route path='employees' element={<EmployeeList />} />
-              <Route path='employees/new' element={<EmployeeCreate />} />
-              <Route path='employees/:employeeId' element={<EmployeeShow />} />
-              <Route path='employees/:employeeId/edit' element={<EmployeeEdit />} />
 
-              {/* category  */}
-              <Route path='categories' element={<CategoryList />} />
-              {/* products */}
-              <Route path='products' element={<ProductList />} />
-              <Route path='products/create' element={<ProductCreate />} />
-              <Route path='products/:id/edit' element={<ProductEdit />} />
-
-              {/* sales / events */}
-              <Route path='activities/events' element={<SaleManager />} />
-              {/* sales report */}
-              <Route path='sales' element={<SalesReportPage />} />
-              {/* orders */}
+              {/* Orders & Support Chat - Admin & Staff can access */}
               <Route path='orders' element={<OrderManagement />} />
-              {/* articles */}
-              <Route path='articles' element={<ArticleManagement />} />
-              {/* warehouse */}
-              <Route path='warehouse' element={<WarehouseManagement />} />
-              {/* support chat */}
               <Route path='support-chat' element={<SupportChatManagement />} />
+
+              {/* Admin only routes */}
+              <Route
+                path='employees'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <EmployeeList />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='accounts'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <Accounts />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='employees/new'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <EmployeeCreate />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='employees/:employeeId'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <EmployeeShow />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='employees/:employeeId/edit'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <EmployeeEdit />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Categories - Admin only */}
+              <Route
+                path='categories'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <CategoryList />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Products - Admin only */}
+              <Route
+                path='products'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <ProductList />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='products/create'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <ProductCreate />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path='products/:id/edit'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <ProductEdit />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Sales & Events - Admin only */}
+              <Route
+                path='activities/events'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <SaleManager />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Sales Report - Admin only */}
+              <Route
+                path='sales'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <SalesReportPage />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Articles - Admin only */}
+              <Route
+                path='articles'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <ArticleManagement />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Contacts (public contact form submissions) - Admin only */}
+              <Route
+                path='contacts'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <ContactRequests />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Warehouse - Admin only */}
+              <Route
+                path='warehouse'
+                element={
+                  <AdminRoute redirectTo='/management'>
+                    <WarehouseManagement />
+                  </AdminRoute>
+                }
+              />
             </Route>
 
             {/* Public Routes with Header/Footer */}
@@ -155,13 +275,42 @@ function App() {
               <Route path='orders' element={<OrderHistoryPage />} />
               <Route path='news' element={<ArticleListPage />} />
               <Route path='news/:slug' element={<ArticleDetailPage />} />
+              <Route path='contact' element={<ContactPage />} />
             </Route>
 
             {/* Auth Routes (no header/footer) */}
-            <Route path='/signup' element={<SignUpPage />} />
-            <Route path='/signin' element={<SignInPage />} />
-            <Route path='/profile' element={<ProfilePage />} />
-            <Route path='/chat' element={<ChatAppPages />} />
+            <Route
+              path='/signup'
+              element={
+                <GuestRoute redirectTo='/'>
+                  <SignUpPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path='/signin'
+              element={
+                <GuestRoute redirectTo='/'>
+                  <SignInPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path='/profile'
+              element={
+                <AuthRoute>
+                  <ProfilePage />
+                </AuthRoute>
+              }
+            />
+            <Route
+              path='/chat'
+              element={
+                <AuthRoute>
+                  <ChatAppPages />
+                </AuthRoute>
+              }
+            />
           </Routes>
         </Router>
       </NotificationsProvider>

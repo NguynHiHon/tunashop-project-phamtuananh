@@ -41,7 +41,11 @@ const OrderNotificationBadge = () => {
         // Setup listeners function
         const setupListeners = () => {
             console.log('OrderNotificationBadge: Registering socket listeners');
-            
+
+            // Remove any existing listeners first to prevent duplicates
+            socketService.offNewOrder();
+            socketService.offNewSupportChat();
+
             // Listen for new orders
             socketService.onNewOrder((data) => {
                 console.log('Received new order:', data);
@@ -70,13 +74,13 @@ const OrderNotificationBadge = () => {
             // Listen for new support chat
             socketService.onNewSupportChat((data) => {
                 console.log('Received new support chat:', data);
-                
+
                 // Don't show notification if user is already on support chat page
                 if (window.location.pathname.includes('/management/support-chat')) {
                     console.log('Suppressing chat notification - user is on support chat page');
                     return;
                 }
-                
+
                 const newNotification = {
                     id: data?.conversation?._id || Date.now().toString(),
                     type: 'chat',
@@ -98,9 +102,21 @@ const OrderNotificationBadge = () => {
             });
         };
 
+        // Track if listeners are already setup to prevent duplicates
+        let listenersSetup = false;
+
+        const setupOnce = () => {
+            if (listenersSetup) {
+                console.log('OrderNotificationBadge: Listeners already setup, skipping');
+                return;
+            }
+            listenersSetup = true;
+            setupListeners();
+        };
+
         // Setup listeners immediately if socket is connected
         if (socketService.isSocketConnected()) {
-            setupListeners();
+            setupOnce();
         }
 
         // Retry with interval until socket is connected
@@ -109,9 +125,9 @@ const OrderNotificationBadge = () => {
         const retryInterval = setInterval(() => {
             retryCount++;
             console.log(`OrderNotificationBadge: Retry ${retryCount}/${maxRetries}, socket connected: ${socketService.isSocketConnected()}`);
-            
+
             if (socketService.isSocketConnected()) {
-                setupListeners();
+                setupOnce();
                 clearInterval(retryInterval);
             } else if (retryCount >= maxRetries) {
                 console.warn('OrderNotificationBadge: Max retries reached, socket not connected');

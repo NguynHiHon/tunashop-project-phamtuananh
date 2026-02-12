@@ -177,7 +177,17 @@ async function updateProduct(id, payload) {
   }
 
   await product.save();
-  return product;
+
+  // Re-fetch with population to get virtuals and populated fields
+  const populatedProduct = await Product.findById(product._id)
+    .populate('defaultImageId')
+    .populate('imageIds')
+    .populate({
+      path: 'productTypeId',
+      populate: { path: 'listAttributeIds' }
+    })
+    .populate('attributes.attributeId');
+  return populatedProduct;
 }
 
 async function getProduct(id) {

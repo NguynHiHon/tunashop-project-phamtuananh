@@ -39,6 +39,13 @@ const warehouseSchema = new mongoose.Schema({
     },
     mapUrl: { type: String }, // Google Maps embed URL
 
+    // Social links for contact page
+    social: {
+        facebook: { type: String, default: '' },
+        instagram: { type: String, default: '' },
+        youtube: { type: String, default: '' },
+    },
+
     // Thông tin hoạt động
     workingHours: {
         monday: { open: { type: String, default: '08:00' }, close: { type: String, default: '18:00' }, isOpen: { type: Boolean, default: true } },
@@ -91,7 +98,8 @@ warehouseSchema.statics.getWarehouse = async function () {
             name: 'Kho chính TunaShop',
             email: 'kho@tunashop.vn',
             address: 'Số 123, Đường ABC, Quận XYZ, TP. Hồ Chí Minh',
-            phone: '0123 456 789'
+            phone: '0123 456 789',
+            social: { facebook: '', instagram: '', youtube: '' }
         });
     }
     return warehouse;
@@ -177,16 +185,27 @@ warehouseSchema.methods.addSupportStaff = async function (userId, options = {}) 
     return this.populate('supportStaff.userId', 'username email name phone role');
 };
 
+// Helper to normalize various id shapes to string
+const _normalizeId = (v) => {
+    if (!v && v !== 0) return '';
+    if (typeof v === 'string') return v;
+    if (v._id) return String(v._id);
+    if (v.toString) return v.toString();
+    return String(v);
+};
+
 // Instance method: Xóa nhân viên support
 warehouseSchema.methods.removeSupportStaff = async function (userId) {
-    this.supportStaff = this.supportStaff.filter(s => s.userId.toString() !== userId.toString());
+    const id = _normalizeId(userId);
+    this.supportStaff = this.supportStaff.filter(s => _normalizeId(s.userId) !== id);
     await this.save();
     return this.populate('supportStaff.userId', 'username email name phone role');
 };
 
 // Instance method: Cập nhật trạng thái nhân viên
 warehouseSchema.methods.updateStaffStatus = async function (userId, updates) {
-    const staff = this.supportStaff.find(s => s.userId.toString() === userId.toString());
+    const id = _normalizeId(userId);
+    const staff = this.supportStaff.find(s => _normalizeId(s.userId) === id);
     if (!staff) {
         throw new Error('Không tìm thấy nhân viên');
     }
@@ -198,7 +217,8 @@ warehouseSchema.methods.updateStaffStatus = async function (userId, updates) {
 
 // Instance method: Tăng số chat của nhân viên
 warehouseSchema.methods.incrementChatCount = async function (userId) {
-    const staff = this.supportStaff.find(s => s.userId.toString() === userId.toString());
+    const id = _normalizeId(userId);
+    const staff = this.supportStaff.find(s => _normalizeId(s.userId) === id);
     if (staff) {
         staff.currentChatCount += 1;
         await this.save();
@@ -207,7 +227,8 @@ warehouseSchema.methods.incrementChatCount = async function (userId) {
 
 // Instance method: Giảm số chat của nhân viên
 warehouseSchema.methods.decrementChatCount = async function (userId) {
-    const staff = this.supportStaff.find(s => s.userId.toString() === userId.toString());
+    const id = _normalizeId(userId);
+    const staff = this.supportStaff.find(s => _normalizeId(s.userId) === id);
     if (staff && staff.currentChatCount > 0) {
         staff.currentChatCount -= 1;
         await this.save();

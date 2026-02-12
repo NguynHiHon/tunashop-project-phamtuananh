@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import { fetchCartCount } from '../../redux/clices/cartSlice';
+import { signOutUser } from '../../services/authService';
 
 // Mega menu data for "Sản phẩm"
 const productMegaMenu = [
@@ -48,65 +49,65 @@ const productMegaMenu = [
         title: 'VỢT CẦU LÔNG',
         color: '#f26522',
         links: [
-            { name: 'Vợt cầu lông Yonex', path: '/products?brand=yonex&type=vot-cau-long' },
-            { name: 'Vợt cầu lông Victor', path: '/products?brand=victor&type=vot-cau-long' },
-            { name: 'Vợt cầu lông Lining', path: '/products?brand=lining&type=vot-cau-long' },
-            { name: 'Vợt cầu lông Mizuno', path: '/products?brand=mizuno&type=vot-cau-long' },
-            { name: 'Vợt cầu lông Apacs', path: '/products?brand=apacs&type=vot-cau-long' },
-            { name: 'Vợt cầu lông Kawasaki', path: '/products?brand=kawasaki&type=vot-cau-long' },
+            { name: 'Vợt cầu lông Yonex', path: '/products?brand=yonex&productType=Badminton+Racket' },
+            { name: 'Vợt cầu lông Victor', path: '/products?brand=victor&productType=Badminton+Racket' },
+            { name: 'Vợt cầu lông Lining', path: '/products?brand=lining&productType=Badminton+Racket' },
+            { name: 'Vợt cầu lông Mizuno', path: '/products?brand=mizuno&productType=Badminton+Racket' },
+            { name: 'Vợt cầu lông Apacs', path: '/products?brand=apacs&productType=Badminton+Racket' },
+            { name: 'Vợt cầu lông Kawasaki', path: '/products?brand=kawasaki&productType=Badminton+Racket' },
         ],
     },
     {
         title: 'GIÀY CẦU LÔNG',
         color: '#f26522',
         links: [
-            { name: 'Giày cầu lông Yonex', path: '/products?brand=yonex&type=giay-cau-long' },
-            { name: 'Giày cầu lông Victor', path: '/products?brand=victor&type=giay-cau-long' },
-            { name: 'Giày cầu lông Lining', path: '/products?brand=lining&type=giay-cau-long' },
-            { name: 'Giày cầu lông Mizuno', path: '/products?brand=mizuno&type=giay-cau-long' },
-            { name: 'Giày cầu lông Kawasaki', path: '/products?brand=kawasaki&type=giay-cau-long' },
-            { name: 'Giày cầu lông Kumpoo', path: '/products?brand=kumpoo&type=giay-cau-long' },
+            { name: 'Giày cầu lông Yonex', path: '/products?brand=yonex&productType=Sneaker+badminton' },
+            { name: 'Giày cầu lông Victor', path: '/products?brand=victor&productType=Sneaker+badminton' },
+            { name: 'Giày cầu lông Lining', path: '/products?brand=lining&productType=Sneaker+badminton' },
+            { name: 'Giày cầu lông Mizuno', path: '/products?brand=mizuno&productType=Sneaker+badminton' },
+            { name: 'Giày cầu lông Kawasaki', path: '/products?brand=kawasaki&productType=Sneaker+badminton' },
+            { name: 'Giày cầu lông Kumpoo', path: '/products?brand=kumpoo&productType=Sneaker+badminton' },
         ],
     },
     {
         title: 'ÁO CẦU LÔNG',
         color: '#f26522',
         links: [
-            { name: 'Áo cầu lông Yonex', path: '/products?brand=yonex&type=ao-cau-long' },
-            { name: 'Áo cầu lông Victor', path: '/products?brand=victor&type=ao-cau-long' },
-            { name: 'Áo cầu lông Kamito', path: '/products?brand=kamito&type=ao-cau-long' },
-            { name: 'Áo cầu lông Lining', path: '/products?brand=lining&type=ao-cau-long' },
-            { name: 'Áo cầu lông Kawasaki', path: '/products?brand=kawasaki&type=ao-cau-long' },
+            { name: 'Áo cầu lông Yonex', path: '/products?brand=yonex&productType=Badminton+Apparel' },
+            { name: 'Áo cầu lông Victor', path: '/products?brand=victor&productType=Badminton+Apparel' },
+            { name: 'Áo cầu lông Kamito', path: '/products?brand=kamito&productType=Badminton+Apparel' },
+            { name: 'Áo cầu lông Lining', path: '/products?brand=lining&productType=Badminton+Apparel' },
+            { name: 'Áo cầu lông Kawasaki', path: '/products?brand=kawasaki&productType=Badminton+Apparel' },
         ],
     },
     {
         title: 'VỢT TENNIS',
         color: '#4CAF50',
         links: [
-            { name: 'Vợt tennis Wilson', path: '/products?brand=wilson&type=vot-tennis' },
-            { name: 'Vợt tennis Head', path: '/products?brand=head&type=vot-tennis' },
-            { name: 'Vợt tennis Babolat', path: '/products?brand=babolat&type=vot-tennis' },
-            { name: 'Vợt tennis Yonex', path: '/products?brand=yonex&type=vot-tennis' },
+            { name: 'Vợt tennis Wilson', path: '/products?brand=wilson&productType=Tennis+Racket' },
+            { name: 'Vợt tennis Head', path: '/products?brand=head&productType=Tennis+Racket' },
+            { name: 'Vợt tennis Babolat', path: '/products?brand=babolat&productType=Tennis+Racket' },
+            { name: 'Vợt tennis Yonex', path: '/products?brand=yonex&productType=Tennis+Racket' },
         ],
     },
     {
         title: 'VỢT PICKLEBALL',
         color: '#2196F3',
         links: [
-            { name: 'Vợt Pickleball Head', path: '/products?brand=head&type=vot-pickleball' },
-            { name: 'Vợt Pickleball Joola', path: '/products?brand=joola&type=vot-pickleball' },
-            { name: 'Vợt Pickleball Selkirk', path: '/products?brand=selkirk&type=vot-pickleball' },
+            { name: 'Vợt Pickleball Head', path: '/products?brand=head&productType=Pickleball+Racket' },
+            { name: 'Vợt Pickleball Joola', path: '/products?brand=joola&productType=Pickleball+Racket' },
+            { name: 'Vợt Pickleball Selkirk', path: '/products?brand=selkirk&productType=Pickleball+Racket' },
         ],
     },
     {
         title: 'PHỤ KIỆN',
         color: '#9c27b0',
         links: [
-            { name: 'Túi vợt cầu lông', path: '/products?type=tui-vot' },
-            { name: 'Balo cầu lông', path: '/products?type=balo' },
-            { name: 'Vớ cầu lông', path: '/products?type=vo' },
-            { name: 'Quấn cán vợt', path: '/products?type=quan-can' },
-            { name: 'Cầu lông', path: '/products?type=cau' },
+            { name: 'Túi vợt cầu lông', path: '/products?productType=Racket+Bag' },
+            { name: 'Balo cầu lông', path: '/products?productType=Backpack' },
+            { name: 'Vớ cầu lông', path: '/products?productType=Socks' },
+            { name: 'Quấn cán vợt', path: '/products?productType=Grip' },
+            { name: 'Cầu lông', path: '/products?productType=Shuttlecock' },
         ],
     },
 ];
@@ -415,7 +416,7 @@ export default function Header() {
                                             Đơn hàng
                                         </MenuItem>
                                         <Divider />
-                                        <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/signin'); }}>
+                                        <MenuItem onClick={async () => { handleCloseUserMenu(); await signOutUser(dispatch, navigate); }}>
                                             Đăng xuất
                                         </MenuItem>
                                     </Menu>

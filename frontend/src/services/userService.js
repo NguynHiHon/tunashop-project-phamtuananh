@@ -30,15 +30,17 @@ const userService = {
     },
     // Get All Users (Admin only)
 
-    getAllUser: async (dispatch) => {
-        dispatch(getUsersListStart());
+    // fetch users with optional filters (roles comma-separated, state)
+    getAllUser: async (dispatch, params = {}) => {
+        // dispatch is optional (some callers use local state)
+        const doDispatch = typeof dispatch === 'function';
+        if (doDispatch) dispatch(getUsersListStart());
         try {
-            const res = await axiosJWT.get('/api/users');
-            dispatch(getUsersListSuccess(res.data));
-
+            const res = await axiosJWT.get('/api/users', { params });
+            if (doDispatch) dispatch(getUsersListSuccess(res.data));
             return res.data;
         } catch (error) {
-            dispatch(getUsersListFailure(error));
+            if (doDispatch) dispatch(getUsersListFailure(error));
             throw error;
         }
     },

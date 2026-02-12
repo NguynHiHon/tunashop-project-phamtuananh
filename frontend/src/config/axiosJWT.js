@@ -4,6 +4,8 @@ import axios from 'axios'
 import { axiosPublic } from './axiosPublic'
 import { setAccessToken, clearToken } from '../redux/clices/tokenSlice'
 import { logout } from '../redux/clices/authSlice'
+import { clearUserProfile } from '../redux/clices/userSlice'
+import { resetCart } from '../redux/clices/cartSlice'
 
 const baseURL = 'http://localhost:9999'
 
@@ -74,6 +76,8 @@ export const setupJwtInterceptors = (store) => {
                     processQueue(refreshError, null)
                     store.dispatch(logout())
                     store.dispatch(clearToken())
+                    store.dispatch(clearUserProfile())
+                    store.dispatch(resetCart())
                     return Promise.reject(refreshError)
                 } finally {
                     isRefreshing = false

@@ -25,6 +25,7 @@ import CategoryIcon from '@mui/icons-material/Category';
 import { Money, Chat as ChatIcon } from '@mui/icons-material';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import EventIcon from '@mui/icons-material/Event';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import {
   getDrawerSxTransitionMixin,
   getDrawerWidthTransitionMixin,
@@ -145,13 +146,7 @@ function DashboardSidebar({
             />
             <DashboardSidebarDividerItem />
             <DashboardSidebarHeaderItem> Danh mục quản lí</DashboardSidebarHeaderItem>
-            <DashboardSidebarPageItem
-              id="articles"
-              title="Bài viết"
-              icon={<ArticleIcon />}
-              href="/management/articles"
-              selected={!!matchPath('/management/articles', pathname)}
-            />
+
             <DashboardSidebarPageItem
               id="reports"
               title="Báo cáo"
@@ -178,11 +173,11 @@ function DashboardSidebar({
                     selected={!!matchPath('/management/sales', pathname)}
                   />
                   <DashboardSidebarPageItem
-                    id="traffic"
-                    title="Traffic"
-                    icon={<DescriptionIcon />}
-                    href="/reports/traffic"
-                    selected={!!matchPath('/reports/traffic', pathname)}
+                    id="orders"
+                    title="Đơn hàng"
+                    icon={<ListOrderedIcon />}
+                    href="/management/orders"
+                    selected={!!matchPath('/management/orders', pathname)}
                   />
                 </List>
               }
@@ -240,17 +235,12 @@ function DashboardSidebar({
                     href="/management/warehouse"
                     selected={!!matchPath('/management/warehouse', pathname)}
                   />
-                  <DashboardSidebarPageItem
-                    id="support-chat"
-                    title="Chat hỗ trợ"
-                    icon={<ChatIcon />}
-                    href="/management/support-chat"
-                    selected={!!matchPath('/management/support-chat', pathname)}
-                  />
-
                 </List>
               }
             />
+
+            {/* Quick access: move support & contacts to top level */}
+
             <DashboardSidebarPageItem
               id="activities"
               title="Hoạt động"
@@ -269,20 +259,16 @@ function DashboardSidebar({
                     minWidth: 240,
                   }}
                 >
-                  <DashboardSidebarPageItem
-                    id="orders"
-                    title="Đơn hàng"
-                    icon={<ListOrderedIcon />}
-                    href="/management/orders"
-                    selected={!!matchPath('/management/orders', pathname)}
-                  />
+
+
+
 
                   <DashboardSidebarPageItem
-                    id="warehouse"
-                    title="Kho hàng"
-                    icon={<WarehouseIcon />}
-                    href="/management/activities/warehouse"
-                    selected={!!matchPath('/management/activities/warehouse', pathname)}
+                    id="activity-articles"
+                    title="Bài viết"
+                    icon={<ArticleIcon />}
+                    href="/management/articles"
+                    selected={!!matchPath('/management/articles', pathname)}
                   />
 
                   <DashboardSidebarPageItem
@@ -296,12 +282,20 @@ function DashboardSidebar({
               }
             />
             <DashboardSidebarPageItem
-              id="integrations"
-              title="Integrations"
-              icon={<LayersIcon />}
-              href="/integrations"
-              selected={!!matchPath('/integrations', pathname)}
+              id="support-chat-top"
+              title="Chat hỗ trợ"
+              icon={<ChatIcon />}
+              href="/management/support-chat"
+              selected={!!matchPath('/management/support-chat', pathname)}
             />
+            <DashboardSidebarPageItem
+              id="contacts-top"
+              title="Yêu cầu liên hệ"
+              icon={<MailOutlineIcon />}
+              href="/management/contacts"
+              selected={!!matchPath('/management/contacts', pathname)}
+            />
+
           </List>
         </Box>
       </React.Fragment>
