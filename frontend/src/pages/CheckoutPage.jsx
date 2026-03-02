@@ -39,6 +39,7 @@ import {
 import { createOrder, clearCreatedOrder } from '../redux/clices/orderSlice';
 import { clearCart } from '../redux/clices/cartSlice';
 import { getProvinces, getDistricts, getWards, formatFullAddress } from '../services/addressService';
+import { createOrder as createOrderAPI, createVNPayPayment } from '../services/orderService';
 
 const SHIPPING_THRESHOLD = 500000;
 const SHIPPING_FEE = 50000;
@@ -83,8 +84,11 @@ const CheckoutPage = () => {
     const [wards, setWards] = useState([]);
     const [loadingAddress, setLoadingAddress] = useState(false);
 
-    // Payment method (only COD for now)
-    const [paymentMethod] = useState('cod');
+    // Payment method state (cod | vnpay)
+    const [paymentMethod, setPaymentMethod] = useState('cod');
+    const [vnpayLoading, setVnpayLoading] = useState(false);
+    const [vnpayError, setVnpayError] = useState('');
+    const [vnpayRedirectUrl, setVnpayRedirectUrl] = useState(''); // URL để hiện màn hình chuyển tiếp
 
     // Order success state
     const [orderSuccess, setOrderSuccess] = useState(false);
@@ -164,18 +168,20 @@ const CheckoutPage = () => {
         }
     }, [formData.districtCode]);
 
-    // Handle createdOrder success
+    // Handle createdOrder success - chỉ hiển thị màn hình thành công với COD
+    // VNPay sẽ redirect browser, không cần setOrderSuccess
     useEffect(() => {
-        if (createdOrder) {
+        if (createdOrder && paymentMethod === 'cod') {
             setOrderSuccess(true);
             if (!buyNowItem) {
                 dispatch(clearCart());
             }
         }
-    }, [createdOrder, buyNowItem, dispatch]);
+    }, [createdOrder, buyNowItem, dispatch, paymentMethod]);
 
-    // Cleanup on unmount
+    // Clear stale createdOrder on mount (tránh hiện màn hình success của đơn cũ)
     useEffect(() => {
+        dispatch(clearCreatedOrder());
         return () => {
             dispatch(clearCreatedOrder());
         };
@@ -241,6 +247,8 @@ const CheckoutPage = () => {
     const handleSubmitOrder = async () => {
         if (!validateForm()) return;
 
+        setVnpayError('');
+
         const orderData = {
             items: checkoutItems.map((item) => ({
                 productId: item.productId || item._id,
@@ -259,15 +267,55 @@ const CheckoutPage = () => {
                 wardName: formData.wardName,
                 addressDetail: formData.addressDetail,
             },
-            paymentMethod: 'cod',
+            paymentMethod,
             note: formData.note,
         };
 
-        dispatch(createOrder(orderData));
+        if (paymentMethod === 'vnpay') {
+            // VNPay: gọi API trực tiếp (KHÔNG qua Redux dispatch)
+            // Tránh createdOrder stale state làm hiện màn hình COD success
+            try {
+                setVnpayLoading(true);
+
+                // Bước 1: Tạo đơn hàng qua API trực tiếp
+                const orderRes = await createOrderAPI(orderData);
+                // createOrderAPI trả về: { success, message, data: order }
+                const newOrderId = orderRes?.data?._id;
+
+                if (!newOrderId) {
+                    setVnpayError('Không lấy được thông tin đơn hàng. Vui lòng thử lại.');
+                    return;
+                }
+
+                // KHÔNG clear giỏ hàng ở đây với VNPay. Giữ nguyên giỏ hàng để nếu user hủy còn quay lại được.
+                // Giỏ hàng sẽ được clear ở trang VNPayReturnPage nếu thanh toán thành công.
+
+                // Bước 2: Lấy URL thanh toán từ backend
+                const vnpayRes = await createVNPayPayment(newOrderId);
+                const paymentUrl = vnpayRes?.data?.paymentUrl;
+
+                if (paymentUrl) {
+                    // Hiện màn hình chuyển tiếp thay vì auto-redirect ẩn
+                    setVnpayRedirectUrl(paymentUrl);
+                } else {
+                    setVnpayError('Không thể tạo URL thanh toán VNPay. Vui lòng thử lại.');
+                }
+            } catch (err) {
+                console.error('[VNPay] Lỗi:', err);
+                setVnpayError(
+                    err?.response?.data?.message || err?.message || 'Lỗi kết nối VNPay. Vui lòng thử lại.'
+                );
+            } finally {
+                setVnpayLoading(false);
+            }
+        } else {
+            // COD: đặt hàng qua Redux bình thường
+            dispatch(createOrder(orderData));
+        }
     };
 
     // Redirect if no items to checkout
-    if (!buyNowItem && cartItems.length === 0 && !orderSuccess) {
+    if (!buyNowItem && cartItems.length === 0 && !orderSuccess && !vnpayRedirectUrl) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -282,6 +330,59 @@ const CheckoutPage = () => {
                         sx={{ mt: 2 }}
                     >
                         Quay lại giỏ hàng
+                    </Button>
+                </Paper>
+            </Container>
+        );
+    }
+
+    // Màn hình chuyển tiếp VNPay - hiện rõ ràng để user biết mình đang được chuyển sang VNPay
+    if (vnpayRedirectUrl) {
+        return (
+            <Container maxWidth="sm" sx={{ py: 8 }}>
+                <Paper elevation={3} sx={{ p: 5, textAlign: 'center', borderRadius: 3 }}>
+                    <Box
+                        component="img"
+                        src="https://sandbox.vnpayment.vn/paymentv2/Assets/Images/logoVNPay.svg"
+                        alt="VNPay"
+                        sx={{ height: 48, mb: 3 }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <Typography variant="h5" fontWeight="bold" gutterBottom>
+                        Xác nhận thanh toán VNPay
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mb: 3 }}>
+                        Đơn hàng đã được tạo với mã <strong>paymentStatus: unpaid</strong> (chưa thanh toán).
+                        Nhấn nút bên dưới để chuyển sang trang thanh toán VNPay và hoàn tất.
+                    </Typography>
+                    <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                        <Typography variant="body2" fontWeight="600" gutterBottom>
+                            Thẻ test NCB (môi trường Sandbox):
+                        </Typography>
+                        <Typography variant="body2">Số thẻ: <strong>9704198526191432198</strong></Typography>
+                        <Typography variant="body2">
+                            Tên: <strong>NGUYEN VAN A</strong> | Ngày: <strong>07/15</strong> | OTP: <strong>123456</strong>
+                        </Typography>
+                    </Alert>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        color="warning"
+                        sx={{ borderRadius: 2, py: 1.5, fontSize: '1.05rem', mb: 2 }}
+                        onClick={() => { window.location.href = vnpayRedirectUrl; }}
+                    >
+                        🔒 Tiếp tục thanh toán tại VNPay
+                    </Button>
+                    <Button
+                        variant="text"
+                        color="inherit"
+                        onClick={() => {
+                            setVnpayRedirectUrl('');
+                            setVnpayError('Bạn đã hủy thanh toán. Đơn hàng sẽ tự động bị hủy.');
+                        }}
+                    >
+                        Hủy và quay lại
                     </Button>
                 </Paper>
             </Container>
@@ -337,6 +438,11 @@ const CheckoutPage = () => {
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {error}
+                </Alert>
+            )}
+            {vnpayError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {vnpayError}
                 </Alert>
             )}
 
@@ -479,7 +585,10 @@ const CheckoutPage = () => {
                         </Box>
 
                         <FormControl component="fieldset">
-                            <RadioGroup value={paymentMethod}>
+                            <RadioGroup
+                                value={paymentMethod}
+                                onChange={(e) => setPaymentMethod(e.target.value)}
+                            >
                                 <FormControlLabel
                                     value="cod"
                                     control={<Radio />}
@@ -491,6 +600,30 @@ const CheckoutPage = () => {
                                             <Typography variant="caption" color="text.secondary">
                                                 Thanh toán bằng tiền mặt khi nhận hàng
                                             </Typography>
+                                        </Box>
+                                    }
+                                />
+                                <FormControlLabel
+                                    value="vnpay"
+                                    control={<Radio />}
+                                    sx={{ mt: 1 }}
+                                    label={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box>
+                                                <Typography variant="body1">
+                                                    Thanh toán qua VNPay
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    ATM nội địa, Visa, Mastercard, QR VNPay
+                                                </Typography>
+                                            </Box>
+                                            <Box
+                                                component="img"
+                                                src="https://sandbox.vnpayment.vn/paymentv2/Assets/Images/logoVNPay.svg"
+                                                alt="VNPay"
+                                                sx={{ height: 28, ml: 1 }}
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
                                         </Box>
                                     }
                                 />
@@ -600,10 +733,13 @@ const CheckoutPage = () => {
                             variant="contained"
                             size="large"
                             onClick={handleSubmitOrder}
-                            disabled={loading}
-                            startIcon={loading ? <CircularProgress size={20} /> : <CheckCircle />}
+                            disabled={loading || vnpayLoading}
+                            startIcon={(loading || vnpayLoading) ? <CircularProgress size={20} /> : <CheckCircle />}
+                            color={paymentMethod === 'vnpay' ? 'warning' : 'primary'}
                         >
-                            {loading ? 'Đang xử lý...' : 'Đặt hàng'}
+                            {loading || vnpayLoading
+                                ? (paymentMethod === 'vnpay' ? 'Đang chuyển đến VNPay...' : 'Đang xử lý...')
+                                : (paymentMethod === 'vnpay' ? 'Thanh toán qua VNPay' : 'Đặt hàng')}
                         </Button>
 
                         <Button

@@ -60,7 +60,7 @@ const restoreStock = async (items) => {
 
 // Create order from cart or direct buy
 const createOrder = async (userId, orderData) => {
-    const { items, shippingAddress, note } = orderData;
+    const { items, shippingAddress, note, paymentMethod = 'cod' } = orderData;
 
     if (!items || items.length === 0) {
         throw new Error('Đơn hàng phải có ít nhất 1 sản phẩm');
@@ -163,7 +163,8 @@ const createOrder = async (userId, orderData) => {
         subtotal,
         shippingFee,
         total,
-        paymentMethod: 'cod',
+        paymentMethod: paymentMethod === 'vnpay' ? 'vnpay' : 'cod',
+        paymentStatus: 'unpaid',
         status: 'pending',
         statusHistory: [{
             status: 'pending',
@@ -181,7 +182,11 @@ const createOrder = async (userId, orderData) => {
 // Get orders for user
 const getUserOrders = async (userId, options = {}) => {
     const { page = 1, limit = 10, status } = options;
-    const query = { userId };
+    const query = {
+        userId,
+        // Ẩn đơn VNPay chưa thanh toán (sẽ hiện sau khi paid hoặc bị hủy)
+        $nor: [{ paymentMethod: 'vnpay', paymentStatus: 'unpaid' }],
+    };
     if (status) query.status = status;
 
     const orders = await Order.find(query)

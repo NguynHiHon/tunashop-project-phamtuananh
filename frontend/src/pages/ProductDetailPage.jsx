@@ -608,6 +608,7 @@ export default function ProductDetailPage() {
                         {!product.hasVariants && (
                             <Typography
                                 variant="body1"
+                                component="div"
                                 sx={{
                                     mb: 2.5,
                                     fontWeight: 600,

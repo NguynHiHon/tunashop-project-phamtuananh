@@ -14,6 +14,7 @@ const articleRouter = require('./articleRouter');
 const systemSettingsRouter = require('./systemSettingsRouter');
 const warehouseRouter = require('./warehouseRouter');
 const contactRouter = require('./contactRouter');
+const vnpayRouter = require('./vnpayRouter');
 const router = express.Router();
 
 router.use('/auth', authRouter);
@@ -30,4 +31,5 @@ router.use('/articles', articleRouter);
 router.use('/settings', systemSettingsRouter);
 router.use('/warehouse', warehouseRouter);
 router.use('/contact', contactRouter);
+router.use('/vnpay', vnpayRouter);
 module.exports = router;

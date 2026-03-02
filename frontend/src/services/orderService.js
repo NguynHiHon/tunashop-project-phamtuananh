@@ -52,3 +52,10 @@ export const updateOrderStatus = async (id, status, note = '') => {
     const response = await axiosJWT.patch(`${API_URL}/admin/${id}/status`, { status, note });
     return response.data;
 };
+
+// Tạo URL thanh toán VNPay từ orderId
+export const createVNPayPayment = async (orderId) => {
+    const response = await axiosJWT.post('/api/vnpay/create-payment', { orderId });
+    return response.data;
+};
+

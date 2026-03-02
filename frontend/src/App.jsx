@@ -53,6 +53,7 @@ import Accounts from './pages/Admin-Management/Accounts'
 import MainLayout from './components/Home/MainLayout'
 import NotificationsProvider from './pages/Admin-Management/hooks/useNotifications/NotificationsProvider'
 import ContactPage from './pages/ContactPage'
+import VNPayReturnPage from './pages/VNPayReturnPage'
 import ProtectedRoute, { AdminRoute, StaffRoute, AuthRoute, GuestRoute } from './components/ProtectedRoute'
 
 // Setup axios interceptors once
@@ -277,6 +278,9 @@ function App() {
               <Route path='news/:slug' element={<ArticleDetailPage />} />
               <Route path='contact' element={<ContactPage />} />
             </Route>
+
+            {/* VNPay Return - standalone page (no header/footer) */}
+            <Route path='/vnpay-return' element={<VNPayReturnPage />} />
 
             {/* Auth Routes (no header/footer) */}
             <Route

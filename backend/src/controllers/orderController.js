@@ -6,25 +6,30 @@ const { emitNewOrder, emitOrderStatusUpdate } = require('../socket/socketUtils')
 const createOrder = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { items, shippingAddress, note, clearCartAfter = true } = req.body;
+        const { items, shippingAddress, note, paymentMethod = 'cod', clearCartAfter = true } = req.body;
 
         const order = await orderService.createOrder(userId, {
             items,
             shippingAddress,
             note,
+            paymentMethod,
         });
 
-        // Clear cart if order was from cart
-        if (clearCartAfter) {
+        // Chỉ clear cart server-side cho COD (VNPay tự clear sau khi thanh toán thành công)
+        if (order.paymentMethod === 'cod' && clearCartAfter) {
             await cartService.clearCart(userId);
         }
 
-        // Emit new order notification to admins
-        emitNewOrder(order);
+        // Chỉ thông báo admin với COD (VNPay sẽ thông báo sau khi thanh toán thành công)
+        if (order.paymentMethod === 'cod') {
+            emitNewOrder(order);
+        }
 
         res.status(201).json({
             success: true,
-            message: 'Đặt hàng thành công',
+            message: order.paymentMethod === 'vnpay'
+                ? 'Đang chuyển đến trang thanh toán VNPay'
+                : 'Đặt hàng thành công',
             data: order,
         });
     } catch (error) {

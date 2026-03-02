@@ -23,6 +23,7 @@ const ProtectedRoute = ({
 
     // Đang kiểm tra authentication (loading state)
     // Nếu có token nhưng chưa có currentUser thì đang load
+
     if (requireAuth && accessToken && !currentUser) {
         return (
             <Box
