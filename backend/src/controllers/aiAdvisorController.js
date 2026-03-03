@@ -1,9 +1,39 @@
 const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 const Product = require('../models/Product');
 const ProductType = require('../models/ProductType');
 const Image = require('../models/Image');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const groq = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+});
+
+// Gọi Gemini, nếu lỗi location/unavailable thì fallback sang Groq
+const callAIWithFallback = async (prompt) => {
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: prompt,
+        });
+        return response.text;
+    } catch (geminiError) {
+        const status = geminiError?.status;
+        // Fallback khi Gemini bị block IP (400) hoặc quá tải (503)
+        if (status === 400 || status === 503 || status === 429) {
+            console.warn(`Gemini thất bại (${status}), chuyển sang Groq AI...`);
+            const groqResponse = await groq.chat.completions.create({
+                model: 'llama-3.3-70b-versatile',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+            });
+            return groqResponse.choices[0].message.content;
+        }
+        throw geminiError; // Lỗi khác thì vẫn throw
+    }
+};
 
 const getAdvisorRecommendation = async (req, res) => {
     try {
@@ -79,12 +109,8 @@ ${productList}
 
 Chỉ trả về JSON, không thêm bất kỳ text nào bên ngoài JSON.`;
 
-        // --- 5. Gọi Gemini API ---
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-        });
-        let text = response.text;
+        // --- 5. Gọi AI (Gemini trước, fallback Groq nếu lỗi) ---
+        let text = await callAIWithFallback(prompt);
 
         // --- 6. Parse JSON từ AI ---
         let recommendation = '';
