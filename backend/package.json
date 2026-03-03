@@ -1,7 +1,7 @@
 {
   "name": "phamtuananh",
   "version": "1.0.0",
-  "description": "day la do an cua toi , quan li chuoi cua hang ban do the thao",
+  "description": "day la do an cua toi , quan li cua hang ban do the thao",
   "main": "server",
   "author": "pham tuan anh ",
   "license": "MIT",
@@ -11,6 +11,8 @@
     "production": "node server.js"
   },
   "dependencies": {
+    "@google/genai": "^1.43.0",
+    "@google/generative-ai": "^0.24.1",
     "@react-oauth/google": "^0.13.4",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

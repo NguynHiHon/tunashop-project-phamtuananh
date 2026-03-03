@@ -88,7 +88,6 @@ const CheckoutPage = () => {
     const [paymentMethod, setPaymentMethod] = useState('cod');
     const [vnpayLoading, setVnpayLoading] = useState(false);
     const [vnpayError, setVnpayError] = useState('');
-    const [vnpayRedirectUrl, setVnpayRedirectUrl] = useState(''); // URL để hiện màn hình chuyển tiếp
 
     // Order success state
     const [orderSuccess, setOrderSuccess] = useState(false);
@@ -295,8 +294,8 @@ const CheckoutPage = () => {
                 const paymentUrl = vnpayRes?.data?.paymentUrl;
 
                 if (paymentUrl) {
-                    // Hiện màn hình chuyển tiếp thay vì auto-redirect ẩn
-                    setVnpayRedirectUrl(paymentUrl);
+                    // Redirect browser trực tiếp đến trang thanh toán VNPay
+                    window.location.href = paymentUrl;
                 } else {
                     setVnpayError('Không thể tạo URL thanh toán VNPay. Vui lòng thử lại.');
                 }
@@ -315,7 +314,7 @@ const CheckoutPage = () => {
     };
 
     // Redirect if no items to checkout
-    if (!buyNowItem && cartItems.length === 0 && !orderSuccess && !vnpayRedirectUrl) {
+    if (!buyNowItem && cartItems.length === 0 && !orderSuccess) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -336,58 +335,6 @@ const CheckoutPage = () => {
         );
     }
 
-    // Màn hình chuyển tiếp VNPay - hiện rõ ràng để user biết mình đang được chuyển sang VNPay
-    if (vnpayRedirectUrl) {
-        return (
-            <Container maxWidth="sm" sx={{ py: 8 }}>
-                <Paper elevation={3} sx={{ p: 5, textAlign: 'center', borderRadius: 3 }}>
-                    <Box
-                        component="img"
-                        src="https://sandbox.vnpayment.vn/paymentv2/Assets/Images/logoVNPay.svg"
-                        alt="VNPay"
-                        sx={{ height: 48, mb: 3 }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <Typography variant="h5" fontWeight="bold" gutterBottom>
-                        Xác nhận thanh toán VNPay
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ mb: 3 }}>
-                        Đơn hàng đã được tạo với mã <strong>paymentStatus: unpaid</strong> (chưa thanh toán).
-                        Nhấn nút bên dưới để chuyển sang trang thanh toán VNPay và hoàn tất.
-                    </Typography>
-                    <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
-                        <Typography variant="body2" fontWeight="600" gutterBottom>
-                            Thẻ test NCB (môi trường Sandbox):
-                        </Typography>
-                        <Typography variant="body2">Số thẻ: <strong>9704198526191432198</strong></Typography>
-                        <Typography variant="body2">
-                            Tên: <strong>NGUYEN VAN A</strong> | Ngày: <strong>07/15</strong> | OTP: <strong>123456</strong>
-                        </Typography>
-                    </Alert>
-                    <Button
-                        variant="contained"
-                        size="large"
-                        fullWidth
-                        color="warning"
-                        sx={{ borderRadius: 2, py: 1.5, fontSize: '1.05rem', mb: 2 }}
-                        onClick={() => { window.location.href = vnpayRedirectUrl; }}
-                    >
-                        🔒 Tiếp tục thanh toán tại VNPay
-                    </Button>
-                    <Button
-                        variant="text"
-                        color="inherit"
-                        onClick={() => {
-                            setVnpayRedirectUrl('');
-                            setVnpayError('Bạn đã hủy thanh toán. Đơn hàng sẽ tự động bị hủy.');
-                        }}
-                    >
-                        Hủy và quay lại
-                    </Button>
-                </Paper>
-            </Container>
-        );
-    }
 
     // Order success screen
     if (orderSuccess && createdOrder) {

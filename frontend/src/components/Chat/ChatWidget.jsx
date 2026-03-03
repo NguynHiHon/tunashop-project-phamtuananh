@@ -20,11 +20,13 @@ import {
     Send as SendIcon,
     SupportAgent,
     Circle,
+    AutoAwesome as AIIcon,
 } from '@mui/icons-material';
 import socketService from '../../services/socketService';
 import warehouseService from '../../services/warehouseService';
 import chatService from '../../services/chatService';
 import { toast } from 'sonner';
+import AIAdvisorModal from './AIAdvisorModal';
 
 const ChatWidget = () => {
     const { isAuthenticated, currentUser } = useSelector((state) => state.auth);
@@ -38,6 +40,7 @@ const ChatWidget = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [noStaffAvailable, setNoStaffAvailable] = useState(false);
+    const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const inputRef = useRef(null);
@@ -272,6 +275,19 @@ const ChatWidget = () => {
                                 <Typography variant="caption">Đang hoạt động</Typography>
                             </Box>
                         </Box>
+                        <IconButton
+                            size="small"
+                            title="Tư vấn vợt bằng AI"
+                            onClick={() => setIsAdvisorOpen(true)}
+                            sx={{
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.15)',
+                                mr: 0.5,
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                            }}
+                        >
+                            <AIIcon fontSize="small" />
+                        </IconButton>
                         <IconButton size="small" sx={{ color: 'white' }} onClick={() => setIsOpen(false)}>
                             <CloseIcon />
                         </IconButton>
@@ -421,6 +437,12 @@ const ChatWidget = () => {
                     )}
                 </Paper>
             </Slide>
+
+            {/* AI Advisor Modal */}
+            <AIAdvisorModal
+                open={isAdvisorOpen}
+                onClose={() => setIsAdvisorOpen(false)}
+            />
         </>
     );
 };
