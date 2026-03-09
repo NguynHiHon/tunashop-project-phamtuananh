@@ -1,0 +1,100 @@
+@startuml PhysicalDesign_05_Chat
+' =============================================
+'  Vật lý - Nhóm 5: Chat hỗ trợ & Cài đặt kho
+'  conversations · messages · warehouses
+' =============================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 60
+skinparam ranksep 80
+scale 1.5
+top to bottom direction
+hide empty methods
+hide circle
+
+class "conversations" as conv <<Collection>> {
+    _id                    : ObjectId       [PK]
+    participants           : ObjectId[]     [FK → users._id, min: 2]
+    unreadCount            : Map(uid→Int32) [đếm tin chưa đọc/user]
+    lastMessage.content    : String(200)    [nội dung tin nhắn cuối]
+    lastMessage.sender     : ObjectId       [FK → users._id]
+    lastMessage.createdAt  : Date
+    createdAt              : Date
+    updatedAt              : Date
+    ==
+    INDEX : { participants : 1 }
+    INDEX : { updatedAt : -1 }
+    ....
+    1 conversation / cặp user (customer ↔ staff)
+    Real-time cập nhật qua Socket.io
+}
+
+class "messages" as msg <<Collection>> {
+    _id            : ObjectId       [PK]
+    conversationId : ObjectId       [FK → conversations._id, INDEX]
+    sender         : ObjectId       [FK → users._id, INDEX]
+    receiver       : ObjectId       [FK → users._id, INDEX]
+    content        : String(5000)   [REQUIRED]
+    type           : String(10)     [ENUM: text | image | file]
+    isRead         : Boolean        [default: false]
+    createdAt      : Date
+    updatedAt      : Date
+    ==
+    INDEX : { conversationId : 1, createdAt : -1 }
+    INDEX : { sender : 1, receiver : 1 }
+    INDEX : { sender : 1 }
+    INDEX : { receiver : 1 }
+    ....
+    Kích thước avg: ~0.5 KB/doc
+    Emit real-time qua Socket.io event "new_message"
+}
+
+class "warehouses" as wh <<Collection>> {
+    _id                    : ObjectId       [PK]
+    name                   : String(200)    [default: "Kho chính TunaShop"]
+    email                  : String(100)    [REQUIRED]
+    address                : String(500)    [REQUIRED]
+    phone                  : String(20)
+    hotline                : String(20)
+    province               : String(100)
+    district               : String(100)
+    ward                   : String(100)
+    coordinates.lat        : Double
+    coordinates.lng        : Double
+    mapUrl                 : String         [Google Maps embed URL]
+    social.facebook        : String
+    social.instagram       : String
+    social.youtube         : String
+    workingHours           : Object         [7 ngày × {open, close, isOpen}]
+    chatAssignmentStrategy : String         [ENUM: round-robin | least-busy
+                                             | random | priority]
+    lastAssignedIndex      : Int32          [dùng cho chiến lược round-robin]
+    isActive               : Boolean
+    notes                  : String
+    createdAt              : Date
+    updatedAt              : Date
+    ---- EMBEDDED: supportStaff[] ----
+    supportStaff.userId             : ObjectId  [FK → users._id]
+    supportStaff.isActive           : Boolean
+    supportStaff.priority           : Int32     [số cao = ưu tiên cao hơn]
+    supportStaff.maxConcurrentChats : Int32     [default: 10]
+    supportStaff.currentChatCount   : Int32     [đang xử lý bao nhiêu chat]
+    supportStaff.assignedAt         : Date
+    ==
+    ....
+    Singleton: chỉ có 1 document trong collection
+    Truy cập qua static method Warehouse.getWarehouse()
+}
+
+conv "1" -down-> "N" msg : "conversationId"
+
+@enduml

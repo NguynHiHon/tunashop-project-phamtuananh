@@ -1,0 +1,101 @@
+@startuml PhysicalDesign_03_Commerce
+' =============================================
+'  Vật lý - Nhóm 3: Giỏ hàng & Đơn hàng
+'  carts · orders
+' =============================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 80
+skinparam ranksep 100
+scale 1.5
+top to bottom direction
+hide empty methods
+hide circle
+
+class "carts" as carts <<Collection>> {
+    _id       : ObjectId      [PK]
+    userId    : ObjectId      [FK → users._id, UNIQUE]
+    createdAt : Date
+    updatedAt : Date
+    ---- EMBEDDED: items[] ----
+    items._id              : ObjectId      [auto]
+    items.productId        : ObjectId      [FK → products._id]
+    items.variantId        : String        [_id của variant trong product]
+    items.variantInfo.size : String
+    items.variantInfo.color: String
+    items.variantInfo.colorCode: String
+    items.variantInfo.sku  : String
+    items.quantity         : Int32         [min: 1]
+    items.addedAt          : Date
+    ==
+    INDEX unique : { userId : 1 }
+    ....
+    Thiết kế: 1 document / user (singleton per user)
+    items[] lưu embedded — không dùng collection riêng
+}
+
+class "orders" as orders <<Collection>> {
+    _id              : ObjectId     [PK]
+    orderCode        : String(20)   [UNIQUE — "TN" + yyyymmdd + 6chars]
+    userId           : ObjectId     [FK → users._id, REQUIRED]
+    subtotal         : Double       [VNĐ — tổng trước phí ship]
+    shippingFee      : Double       [VNĐ — default: 0]
+    total            : Double       [VNĐ — subtotal + shippingFee]
+    paymentMethod    : String(10)   [ENUM: cod | vnpay]
+    paymentStatus    : String(10)   [ENUM: unpaid | paid | failed]
+    status           : String(15)   [ENUM: pending | approved | rejected
+                                     | shipping | cancelled | delivered]
+    note             : String(500)
+    rejectionReason  : String(500)
+    deliveredAt      : Date
+    createdAt        : Date
+    updatedAt        : Date
+    ---- EMBEDDED: items[] ----
+    items.productId     : ObjectId    [FK → products._id]
+    items.variantId     : String
+    items.variantInfo   : Object      [{size, color, colorCode, sku}]
+    items.productName   : String      [SNAPSHOT — chụp tại thời điểm đặt]
+    items.productImage  : String      [SNAPSHOT URL]
+    items.price         : Double      [SNAPSHOT giá gốc]
+    items.salePercent   : Int32       [SNAPSHOT % giảm giá]
+    items.finalPrice    : Double      [SNAPSHOT giá sau giảm]
+    items.quantity      : Int32
+    items.subtotal      : Double      [finalPrice × quantity]
+    ---- EMBEDDED: shippingAddress ----
+    shippingAddress.fullName      : String(200)
+    shippingAddress.phone         : String(15)
+    shippingAddress.provinceCode  : String(10)
+    shippingAddress.provinceName  : String(100)
+    shippingAddress.districtCode  : String(10)
+    shippingAddress.districtName  : String(100)
+    shippingAddress.wardCode      : String(10)
+    shippingAddress.wardName      : String(100)
+    shippingAddress.addressDetail : String(500)
+    ---- EMBEDDED: statusHistory[] ----
+    statusHistory.status    : String(15)
+    statusHistory.changedAt : Date
+    statusHistory.changedBy : ObjectId   [FK → users._id]
+    statusHistory.note      : String(500)
+    ==
+    INDEX unique : { orderCode : 1 }
+    INDEX        : { userId : 1 }
+    INDEX        : { status : 1 }
+    INDEX        : { paymentStatus : 1 }
+    INDEX        : { createdAt : -1 }
+    ....
+    Kích thước avg: ~3 KB/doc
+    items dùng snapshot — không bị ảnh hưởng khi product thay đổi
+}
+
+carts -[hidden]right- orders
+
+@enduml

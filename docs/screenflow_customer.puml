@@ -1,0 +1,116 @@
+@startuml TunaShop_ScreenFlow_Customer
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam nodesep 40
+skinparam ranksep 60
+skinparam RoundCorner 0
+skinparam ArrowColor #333333
+skinparam rectangleBorderColor #333333
+skinparam packageBorderColor #888888
+skinparam packageBackgroundColor #f9f9f9
+
+top to bottom direction
+
+title Sơ đồ màn hình - Quyền Khách Hàng (Customer)\n(Đã đăng nhập - role: user)
+
+' ===================== AUTH =====================
+frame "Xác Thực" {
+  rectangle "Đăng Ký\n(SignUpPage)\n/signup" as SignUp
+  rectangle "Đăng Nhập\n(SignInPage)\n/signin" as SignIn
+}
+
+' ===================== HOME =====================
+rectangle "Trang Chủ\n(HomePage)\n/" as Home
+
+' ===================== NHÓM: SẢN PHẨM =====================
+frame "Sản Phẩm & Khuyến Mãi" {
+  rectangle "Danh Sách SP\n(ProductListPage)\n/products" as ProdList
+  rectangle "Trang KM\n(SaleOffPage)\n/sale" as Sale
+  rectangle "Chi Tiết SP\n(ProductDetailPage)\n/products/:id" as ProdDetail
+  rectangle "Tư Vấn AI\n(AI Advisor Modal)" as AI
+}
+
+' ===================== NHÓM: THÔNG TIN =====================
+frame "Thông Tin & Hỗ Trợ" {
+  rectangle "Tin Tức\n(ArticleListPage)\n/news" as News
+  rectangle "Chi Tiết Bài Viết\n(ArticleDetailPage)\n/news/:slug" as NewsDetail
+  rectangle "Hướng Dẫn\n(GuidePage)\n/guide" as Guide
+  rectangle "HD Thanh Toán\n/guide/payment" as GuidePayment
+  rectangle "HD Đặt Hàng\n/guide/ordering" as GuideOrder
+  rectangle "HD Chọn Vợt\n/guide/racket-selection" as GuideRacket
+  rectangle "Giới Thiệu\n(AboutPage)\n/about" as About
+  rectangle "Nhượng Quyền\n(FranchisePage)\n/franchise" as Franchise
+  rectangle "Liên Hệ\n(ContactPage)\n/contact" as Contact
+}
+
+' ===================== KIỂM TRA ĐĂNG NHẬP =====================
+rectangle "Đã đăng nhập?\n[Thêm giỏ]" <<decision>> as CheckLogin1
+rectangle "Đã đăng nhập?\n[Đơn hàng]" <<decision>> as CheckLogin2
+rectangle "Đã đăng nhập?\n[Chat]" <<decision>> as CheckLogin3
+
+' ===================== NHÓM: YÊU CẦU ĐĂNG NHẬP =====================
+frame "Yêu Cầu Đăng Nhập" {
+  rectangle "Hồ Sơ Cá Nhân\n(ProfilePage)\n/profile" as Profile
+  rectangle "Giỏ Hàng\n(CartPage)\n/cart" as Cart
+  rectangle "Thanh Toán\n(CheckoutPage)\n/checkout" as Checkout
+  rectangle "VNPay Return\n/vnpay-return" as VNPay
+  rectangle "Lịch Sử Đơn Hàng\n(OrderHistoryPage)\n/orders" as OrderHistory
+  rectangle "Chat Hỗ Trợ\n(ChatAppPages)\n/chat" as Chat
+}
+
+' ===================== FLOW =====================
+
+' Auth
+SignUp -down-> SignIn : Đã có tài khoản
+SignIn -down-> Home : Đăng nhập thành công
+SignUp -down-> Home : Đăng ký thành công
+
+' Home điều hướng theo chiều dọc
+Home -down-> ProdList : Xem sản phẩm
+Home -down-> Sale : Khuyến mãi
+Home -down-> News : Tin tức
+Home -down-> Guide : Hướng dẫn
+Home -down-> About : Giới thiệu
+Home -down-> Franchise : Nhượng quyền
+Home -down-> Contact : Liên hệ
+Home -down-> Profile : Nhấn avatar
+
+' Sản phẩm
+ProdList -down-> ProdDetail : Chọn sản phẩm
+Sale -down-> ProdDetail : Chọn SP khuyến mãi
+ProdDetail -right-> AI : Tư vấn AI
+AI -left-> ProdDetail : Gợi ý SP
+
+' Thêm vào giỏ
+ProdDetail -down-> CheckLogin1 : Thêm vào giỏ
+CheckLogin1 -left-> SignIn : [Chưa đăng nhập]
+CheckLogin1 -right-> Cart : [Đã đăng nhập]
+
+' Checkout flow
+Cart -down-> Checkout : Đặt hàng
+Checkout -down-> VNPay : Thanh toán VNPay
+VNPay -down-> OrderHistory : Thanh toán thành công
+
+' Xem đơn hàng
+Home -down-> CheckLogin2 : Xem đơn hàng
+CheckLogin2 -left-> SignIn : [Chưa đăng nhập]
+CheckLogin2 -right-> OrderHistory : [Đã đăng nhập]
+
+' Chat hỗ trợ
+Home -down-> CheckLogin3 : Chat hỗ trợ
+CheckLogin3 -left-> SignIn : [Chưa đăng nhập]
+CheckLogin3 -right-> Chat : [Đã đăng nhập]
+
+' Tin tức & Hướng dẫn
+News -down-> NewsDetail : Chọn bài viết
+Guide -down-> GuidePayment : HD Thanh toán
+Guide -down-> GuideOrder : HD Đặt hàng
+Guide -down-> GuideRacket : HD Chọn vợt
+
+' Profile
+Profile -down-> OrderHistory : Xem đơn hàng
+Profile -down-> Chat : Chat hỗ trợ
+
+@enduml

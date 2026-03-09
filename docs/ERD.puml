@@ -1,0 +1,268 @@
+@startuml ERD_TunaShop
+' =====================================================
+'  3.3.3.1 - Sơ đồ ERD (Entity Relationship Diagram)
+'  Hệ thống Shop Thể Thao TunaShop
+' =====================================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam EntityFontSize 12
+skinparam EntityAttributeFontSize 11
+skinparam EntityBorderColor #000000
+skinparam EntityBackgroundColor #FFFFFF
+skinparam ArrowColor #000000
+skinparam linetype ortho
+top to bottom direction
+
+hide empty methods
+hide circle
+
+' =====================================================
+' ENTITIES
+' =====================================================
+
+entity "User" as User {
+    * _id : ObjectId <<PK>>
+    --
+    * username : String <<unique>>
+    * email : String <<unique>>
+    password : String
+    role : String
+    googleId : String
+    avatar : String
+    authProvider : String
+    phone : String
+    name : String
+    fullName : String
+    address : String
+    state : String
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "Session" as Session {
+    * _id : ObjectId <<PK>>
+    --
+    * userId : ObjectId <<FK>>
+    * refreshToken : String <<unique>>
+    * expireAt : Date
+    createdAt : Date
+}
+
+entity "ProductType" as ProductType {
+    * _id : ObjectId <<PK>>
+    --
+    * name : String <<unique>>
+    * name_vi : String
+}
+
+entity "Attribute" as Attribute {
+    * _id : ObjectId <<PK>>
+    --
+    * name : String
+    * name_vi : String
+    * type : String
+    options : [String]
+}
+
+entity "Product" as Product {
+    * _id : ObjectId <<PK>>
+    --
+    * name : String
+    * brand : String
+    * productTypeId : ObjectId <<FK>>
+    * price : Number
+    salePercent : Number
+    saleStartAt : Date
+    saleEndAt : Date
+    warranty : String
+    stock : Number
+    hasVariants : Boolean
+    availableSizes : [String]
+    description : String
+    defaultImageId : ObjectId <<FK>>
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "Variant" as Variant {
+    * (embedded in Product)
+    --
+    sku : String
+    size : String
+    color : String
+    colorCode : String
+    stock : Number
+    priceAdjustment : Number
+    imageId : ObjectId <<FK>>
+    isActive : Boolean
+}
+
+entity "Image" as Image {
+    * _id : ObjectId <<PK>>
+    --
+    * url_Image : String
+    productId : ObjectId <<FK>>
+}
+
+entity "Cart" as Cart {
+    * _id : ObjectId <<PK>>
+    --
+    * userId : ObjectId <<FK, unique>>
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "CartItem" as CartItem {
+    * (embedded in Cart)
+    --
+    productId : ObjectId <<FK>>
+    variantId : String
+    size : String
+    color : String
+    colorCode : String
+    sku : String
+    quantity : Number
+    addedAt : Date
+}
+
+entity "Order" as Order {
+    * _id : ObjectId <<PK>>
+    --
+    * orderCode : String <<unique>>
+    * userId : ObjectId <<FK>>
+    subtotal : Number
+    shippingFee : Number
+    total : Number
+    paymentMethod : String
+    paymentStatus : String
+    status : String
+    note : String
+    rejectionReason : String
+    deliveredAt : Date
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "OrderItem" as OrderItem {
+    * (embedded in Order)
+    --
+    productId : ObjectId <<FK>>
+    variantId : String
+    productName : String
+    productImage : String
+    price : Number
+    salePercent : Number
+    finalPrice : Number
+    quantity : Number
+    subtotal : Number
+}
+
+entity "Article" as Article {
+    * _id : ObjectId <<PK>>
+    --
+    * title : String
+    * slug : String <<unique>>
+    * excerpt : String
+    * content : String
+    * thumbnail : String
+    images : [String]
+    videoUrl : String
+    category : String
+    tags : [String]
+    * author : ObjectId <<FK>>
+    status : String
+    publishedAt : Date
+    viewCount : Number
+    featured : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "Conversation" as Conversation {
+    * _id : ObjectId <<PK>>
+    --
+    participants : [ObjectId] <<FK>>
+    lastMessage.content : String
+    lastMessage.sender : ObjectId <<FK>>
+    lastMessage.createdAt : Date
+    unreadCount : Map
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "Message" as Message {
+    * _id : ObjectId <<PK>>
+    --
+    * conversationId : ObjectId <<FK>>
+    * sender : ObjectId <<FK>>
+    * receiver : ObjectId <<FK>>
+    * content : String
+    type : String
+    isRead : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "ContactMessage" as ContactMessage {
+    * _id : ObjectId <<PK>>
+    --
+    * name : String
+    * email : String
+    phone : String
+    subject : String
+    * message : String
+    status : String
+    reply : String
+    assignedTo : ObjectId <<FK>>
+    createdAt : Date
+    updatedAt : Date
+}
+
+entity "Warehouse" as Warehouse {
+    * _id : ObjectId <<PK>>
+    --
+    * name : String
+    * email : String
+    * address : String
+    phone : String
+    hotline : String
+    province : String
+    district : String
+    ward : String
+    chatAssignmentStrategy : String
+    isActive : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+' =====================================================
+' RELATIONSHIPS
+' =====================================================
+
+User ||--o{ Session : "có"
+User ||--o| Cart : "sở hữu"
+User ||--o{ Order : "đặt"
+User ||--o{ Article : "viết"
+User }o--o{ Conversation : "tham gia"
+User ||--o{ Message : "gửi"
+User ||--o{ ContactMessage : "tiếp nhận\n(assignedTo)"
+User }o--o{ Warehouse : "phụ trách\n(supportStaff)"
+
+Product }o--|| ProductType : "thuộc loại"
+Product |o--o{ Image : "có ảnh"
+Product ||--o{ Variant : "có biến thể\n(embedded)"
+ProductType }o--o{ Attribute : "có thuộc tính"
+Product }o--o{ Attribute : "gán giá trị\n(embedded)"
+
+Cart ||--o{ CartItem : "chứa\n(embedded)"
+CartItem }o--|| Product : "tham chiếu"
+
+Order ||--o{ OrderItem : "gồm\n(embedded)"
+OrderItem }o--|| Product : "tham chiếu"
+
+Conversation ||--o{ Message : "chứa"
+
+@enduml

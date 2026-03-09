@@ -1,0 +1,86 @@
+@startuml PhysicalDesign_TunaShop
+' ==========================================================
+'  3.3.3.4 - Thiết kế CSDL mức vật lý — TỔNG QUAN
+'  MongoDB - Hệ thống Shop Thể Thao TunaShop
+'
+'  Xem chi tiết từng nhóm tại:
+'    PhysicalDesign_01_Auth.puml      (users, sessions)
+'    PhysicalDesign_02_Products.puml  (producttypes, attributes, images, products)
+'    PhysicalDesign_03_Commerce.puml  (carts, orders)
+'    PhysicalDesign_04_Content.puml   (articles, contactmessages)
+'    PhysicalDesign_05_Chat.puml      (conversations, messages, warehouses)
+' ==========================================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 50
+skinparam ranksep 60
+scale 1.4
+top to bottom direction
+
+hide empty methods
+hide circle
+
+' =====================================================
+' COLLECTIONS (overview — không có field chi tiết)
+' =====================================================
+
+together {
+    class "users" as users <<Collection>>
+    class "sessions" as sessions <<Collection>>
+}
+
+together {
+    class "producttypes" as producttypes <<Collection>>
+    class "attributes" as attributes <<Collection>>
+    class "images" as images <<Collection>>
+    class "products" as products <<Collection>>
+}
+
+together {
+    class "carts" as carts <<Collection>>
+    class "orders" as orders <<Collection>>
+}
+
+together {
+    class "articles" as articles <<Collection>>
+    class "contactmessages" as contact <<Collection>>
+}
+
+together {
+    class "conversations" as conversations <<Collection>>
+    class "messages" as messages <<Collection>>
+    class "warehouses" as warehouses <<Collection>>
+}
+
+' =====================================================
+' QUAN HỆ VẬT LÝ
+' =====================================================
+
+users "1" -down-> "0..3" sessions      : "userId\n(max 3)"
+users "1" -down-> "1" carts            : "userId\n(1-1)"
+users "1" -down-> "N" orders           : "userId"
+users "1" -down-> "N" articles         : "author"
+users "N" ..> conversations            : "participants[]"
+users "1" -down-> "N" messages         : "sender / receiver"
+users "1" ..> contact                  : "assignedTo"
+users "N" ..> warehouses               : "supportStaff[].userId"
+
+producttypes "1" -down-> "N" products  : "productTypeId"
+producttypes "N" ..> "N" attributes    : "listAttributeIds[]"
+products "1" -right-> "N" images       : "productId"
+
+carts ..> products                     : "items[].productId"
+orders ..> products                    : "items[].productId\n(snapshot)"
+
+conversations "1" -down-> "N" messages : "conversationId"
+
+@enduml

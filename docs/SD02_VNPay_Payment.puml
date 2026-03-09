@@ -1,0 +1,80 @@
+@startuml SD02_VNPay_Payment
+
+scale 1.4
+skinparam monochrome true
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title <size:15><b>SD02 — Thanh Toán VNPay</b></size>
+
+actor "Khách Hàng" as User
+participant "CheckoutPage\n(Frontend)" as UI
+participant "VNPayReturnPage\n(Frontend)" as ReturnUI
+participant "OrderRouter\nPOST /orders" as ORouter
+participant "VNPayRouter" as VRouter
+participant "OrderController" as OCtrl
+participant "VNPayController" as VCtrl
+participant "OrderService" as OSvc
+participant "VNPayService" as VSvc
+participant "VNPay\nGateway" as VNPay
+database "MongoDB\n(Order / Product)" as DB
+
+== Đặt hàng ==
+User -> UI : Điền địa chỉ, chọn\nphương thức VNPay
+UI -> ORouter : POST /api/orders\n{ items, shippingAddress,\n  paymentMethod: 'vnpay' }
+ORouter -> OCtrl : createOrder(req, res)
+OCtrl -> OSvc : createOrder(userId, payload)
+OSvc -> DB : Kiểm tra tồn kho sản phẩm
+DB --> OSvc : Stock hợp lệ
+OSvc -> DB : Order.create({ ...data,\n  paymentStatus: 'pending' })
+DB --> OSvc : Order { _id, orderCode }
+OSvc --> OCtrl : order
+OCtrl --> UI : 201 { order }\n"Đang chuyển đến VNPay"
+
+note right of OCtrl
+  Không clear cart,
+  không notify admin
+  (chờ VNPay callback)
+end note
+
+== Tạo URL thanh toán ==
+UI -> VRouter : POST /api/vnpay/create-payment\n{ orderId }
+VRouter -> VCtrl : createPayment(req, res)
+VCtrl -> DB : Order.findOne({ _id, userId })
+DB --> VCtrl : Order hợp lệ
+VCtrl -> VSvc : createPaymentUrl(order, ipAddr)
+VSvc -> VSvc : Tạo chữ ký HMAC-SHA512\nvà build URL VNPay
+VSvc --> VCtrl : paymentUrl
+VCtrl --> UI : 200 { paymentUrl }
+UI -> User : Chuyển hướng trình duyệt\nđến VNPay Gateway
+
+== Khách thanh toán trên VNPay ==
+User -> VNPay : Nhập thông tin thẻ\nvà xác nhận thanh toán
+VNPay -> VRouter : GET /api/vnpay/return?...\n(Redirect về backend)
+VRouter -> VCtrl : vnpayReturn(req, res)
+VCtrl -> VSvc : verifyReturnData(query)
+VSvc -> VSvc : Xác thực chữ ký\nHMAC-SHA512
+
+alt Chữ ký không hợp lệ
+  VCtrl --> ReturnUI : Redirect ?status=invalid
+  ReturnUI --> User : "Giao dịch không hợp lệ"
+end
+
+VCtrl -> DB : Order.findOne({ orderCode: txnRef })
+
+alt Thanh toán thành công (responseCode=00)
+  VCtrl -> DB : order.paymentStatus = 'paid'\norder.save()
+  VCtrl -> VCtrl : emitNewOrder(order)\n→ Thông báo Admin qua Socket
+  VCtrl -> DB : cartService.clearCart(userId)
+  VCtrl --> ReturnUI : Redirect ?status=success
+  ReturnUI --> User : "Thanh toán thành công!\nMã đơn: #orderCode"
+else Thanh toán thất bại / hủy
+  VCtrl -> DB : paymentStatus='failed'\nstatus='cancelled'\nHoàn trả tồn kho
+  VCtrl --> ReturnUI : Redirect ?status=failed
+  ReturnUI --> User : "Thanh toán thất bại"
+end
+
+@enduml

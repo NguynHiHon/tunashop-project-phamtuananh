@@ -1,0 +1,268 @@
+@startuml RelationalModel_TunaShop
+' ==========================================================
+'  3.3.3.2 - Mô hình quan hệ (Relational Model)
+'  Hệ thống Shop Thể Thao TunaShop
+' ==========================================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ClassFontSize 12
+skinparam ClassAttributeFontSize 10
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam linetype ortho
+top to bottom direction
+
+hide empty methods
+hide circle
+
+' =====================================================
+' COLLECTIONS / TABLES
+' =====================================================
+
+class "users" as users <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    username : String  [UNIQUE, NOT NULL]
+    email : String  [UNIQUE, NOT NULL]
+    password : String
+    role : String  {user|staff|admin}
+    googleId : String
+    avatar : String
+    authProvider : String  {local|google}
+    phone : String
+    name : String
+    fullName : String
+    address : String
+    state : String  {active|banned|suspended}
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "sessions" as sessions <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    userId : ObjectId  [FK → users._id, IDX]
+    refreshToken : String  [UNIQUE, NOT NULL]
+    expireAt : Date  [NOT NULL, TTL+7d]
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "producttypes" as producttypes <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    name : String  [UNIQUE, NOT NULL]
+    name_vi : String  [NOT NULL]
+    listAttributeIds : ObjectId[]  [FK → attributes._id]
+}
+
+class "attributes" as attributes <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    name : String  [NOT NULL]
+    name_vi : String  [NOT NULL]
+    type : String  {select|number|text}
+    options : String[]
+}
+
+class "images" as images <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    url_Image : String  [NOT NULL]
+    productId : ObjectId  [FK → products._id]
+}
+
+class "products" as products <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    name : String  [NOT NULL]
+    brand : String  [NOT NULL]
+    productTypeId : ObjectId  [FK → producttypes._id]
+    attributes : EmbeddedDoc[]
+      └─ attributeId : ObjectId  [FK → attributes._id]
+      └─ value : String
+    price : Number  [NOT NULL]
+    salePercent : Number  {0..100}
+    saleStartAt : Date
+    saleEndAt : Date
+    warranty : String
+    stock : Number
+    hasVariants : Boolean
+    variants : EmbeddedDoc[]  (VariantSchema)
+    availableSizes : String[]
+    availableColors : Object[]
+    defaultImageId : ObjectId  [FK → images._id]
+    imageIds : ObjectId[]  [FK → images._id]
+    description : String
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "VariantSchema\n(embedded)" as variant <<EmbeddedDoc>> {
+    sku : String
+    size : String
+    color : String
+    colorCode : String
+    stock : Number
+    priceAdjustment : Number
+    imageId : ObjectId  [FK → images._id]
+    isActive : Boolean
+}
+
+class "carts" as carts <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    userId : ObjectId  [FK → users._id, UNIQUE]
+    items : EmbeddedDoc[]  (CartItemSchema)
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "CartItemSchema\n(embedded)" as cartitem <<EmbeddedDoc>> {
+    productId : ObjectId  [FK → products._id]
+    variantId : String
+    variantInfo.size : String
+    variantInfo.color : String
+    variantInfo.colorCode : String
+    variantInfo.sku : String
+    quantity : Number
+    addedAt : Date
+}
+
+class "orders" as orders <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    orderCode : String  [UNIQUE, NOT NULL]
+    userId : ObjectId  [FK → users._id]
+    items : EmbeddedDoc[]  (OrderItemSchema)
+    shippingAddress : EmbeddedDoc
+    subtotal : Number
+    shippingFee : Number
+    total : Number
+    paymentMethod : String  {cod|vnpay}
+    paymentStatus : String  {unpaid|paid|failed}
+    status : String  {pending|approved|...}
+    statusHistory : EmbeddedDoc[]
+    note : String
+    rejectionReason : String
+    deliveredAt : Date
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "OrderItemSchema\n(embedded)" as orderitem <<EmbeddedDoc>> {
+    productId : ObjectId  [FK → products._id]
+    variantId : String
+    variantInfo : Object
+    productName : String
+    productImage : String
+    price : Number
+    salePercent : Number
+    finalPrice : Number
+    quantity : Number
+    subtotal : Number
+}
+
+class "articles" as articles <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    title : String  [NOT NULL]
+    slug : String  [UNIQUE]
+    excerpt : String  [NOT NULL, max:500]
+    content : String  [NOT NULL]
+    thumbnail : String
+    images : String[]
+    videoUrl : String
+    category : String  {tin-tuc|review|...}
+    tags : String[]
+    author : ObjectId  [FK → users._id]
+    status : String  {draft|published|archived}
+    publishedAt : Date
+    viewCount : Number
+    featured : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "conversations" as conversations <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    participants : ObjectId[]  [FK → users._id]
+    lastMessage.content : String
+    lastMessage.sender : ObjectId  [FK → users._id]
+    lastMessage.createdAt : Date
+    unreadCount : Map<String, Number>
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "messages" as messages <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    conversationId : ObjectId  [FK → conversations._id, IDX]
+    sender : ObjectId  [FK → users._id, IDX]
+    receiver : ObjectId  [FK → users._id, IDX]
+    content : String  [NOT NULL, max:5000]
+    type : String  {text|image|file}
+    isRead : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "contactmessages" as contactmessages <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    name : String  [NOT NULL]
+    email : String  [NOT NULL]
+    phone : String
+    subject : String
+    message : String  [NOT NULL]
+    status : String  {new|in_progress|handled}
+    reply : String
+    assignedTo : ObjectId  [FK → users._id]
+    createdAt : Date
+    updatedAt : Date
+}
+
+class "warehouses" as warehouses <<Collection>> {
+    <u>_id</u> : ObjectId  [PK]
+    name : String
+    email : String
+    address : String
+    phone : String
+    hotline : String
+    province/district/ward : String
+    coordinates : Object
+    mapUrl : String
+    social : Object
+    workingHours : Object
+    supportStaff : EmbeddedDoc[]
+      └─ userId : ObjectId  [FK → users._id]
+      └─ isActive : Boolean
+      └─ priority : Number
+      └─ maxConcurrentChats : Number
+      └─ currentChatCount : Number
+    chatAssignmentStrategy : String
+    isActive : Boolean
+    createdAt : Date
+    updatedAt : Date
+}
+
+' =====================================================
+' RELATIONSHIPS (FK arrows)
+' =====================================================
+
+users "1" --o{ "N" sessions : "userId"
+users "1" --o| "1" carts : "userId"
+users "1" --o{ "N" orders : "userId"
+users "1" --o{ "N" articles : "author"
+users "N" }o--o{ "N" conversations : "participants[]"
+users "1" --o{ "N" messages : "sender/receiver"
+users "1" --o{ "N" contactmessages : "assignedTo"
+
+producttypes "1" --o{ "N" products : "productTypeId"
+producttypes "N" }o--o{ "N" attributes : "listAttributeIds[]"
+
+products "1" --o{ "N" images : "productId"
+products "1" *-- "N" variant : "variants[]\n(embedded)"
+products "1" --o{ "N" orderitem : "productId"
+products "1" --o{ "N" cartitem : "productId"
+
+carts "1" *-- "N" cartitem : "items[]\n(embedded)"
+orders "1" *-- "N" orderitem : "items[]\n(embedded)"
+conversations "1" --o{ "N" messages : "conversationId"
+
+@enduml

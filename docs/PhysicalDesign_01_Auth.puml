@@ -1,0 +1,65 @@
+@startuml PhysicalDesign_01_Auth
+' =============================================
+'  Vật lý - Nhóm 1: Xác thực & Tài khoản
+'  users · sessions
+' =============================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 60
+skinparam ranksep 80
+scale 1.5
+top to bottom direction
+hide empty methods
+hide circle
+
+class "users" as users <<Collection>> {
+    _id          : ObjectId          [PK]
+    username     : String(50)        [UNIQUE, REQUIRED]
+    email        : String(100)       [UNIQUE, REQUIRED]
+    password     : String(60)        [bcrypt hash, null nếu Google]
+    role         : String(10)        [ENUM: user | staff | admin]
+    googleId     : String            [null nếu authProvider=local]
+    avatar       : String(500)       [Cloudinary URL]
+    authProvider : String(10)        [ENUM: local | google]
+    phone        : String(15)
+    name         : String(100)
+    fullName     : String(200)
+    address      : String(500)
+    state        : String(15)        [ENUM: active | banned | suspended]
+    createdAt    : Date
+    updatedAt    : Date
+    ==
+    INDEX unique : { username : 1 }
+    INDEX unique : { email : 1 }
+    INDEX        : { role : 1 }
+    INDEX        : { state : 1 }
+}
+
+class "sessions" as sessions <<Collection>> {
+    _id          : ObjectId          [PK]
+    userId       : ObjectId          [FK → users._id, INDEX]
+    refreshToken : String(512)       [UNIQUE, REQUIRED — JWT token]
+    expireAt     : Date              [REQUIRED — 30 ngày từ khi login]
+    createdAt    : Date
+    updatedAt    : Date
+    ==
+    INDEX        : { userId : 1 }
+    INDEX unique : { refreshToken : 1 }
+    TTL INDEX    : { expireAt : 1 }  [expireAfterSeconds: 604800]
+    ....
+    Nghiệp vụ: Tối đa 3 session/user
+    Khi vượt: xóa session cũ nhất
+}
+
+users "1" -down-> "0..3" sessions : "userId\n(max 3 sessions)"
+
+@enduml

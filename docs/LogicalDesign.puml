@@ -1,0 +1,298 @@
+@startuml LogicalDesign_TunaShop
+' ==========================================================
+'  3.3.3.3 - Thiết kế cơ sở dữ liệu mức logic
+'  Hệ thống Shop Thể Thao TunaShop
+' ==========================================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ClassFontSize 12
+skinparam ClassAttributeFontSize 10
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam linetype ortho
+top to bottom direction
+
+hide empty methods
+hide circle
+
+' =====================================================
+' NHÓM 1: XÁC THỰC & TÀI KHOẢN
+' =====================================================
+
+together {
+
+class "users" as users <<Collection>> {
+    _id          : ObjectId      [PK]
+    username     : String        [UNIQUE, REQUIRED]
+    email        : String        [UNIQUE, REQUIRED]
+    password     : String        [null nếu Google login]
+    role         : String        [ENUM: user|staff|admin]
+    googleId     : String        [null nếu local]
+    avatar       : String        [URL]
+    authProvider : String        [ENUM: local|google]
+    phone        : String
+    name         : String
+    fullName     : String
+    address      : String
+    state        : String        [ENUM: active|banned|suspended]
+    createdAt    : Date
+    updatedAt    : Date
+}
+
+class "sessions" as sessions <<Collection>> {
+    _id          : ObjectId      [PK]
+    userId       : ObjectId      [FK → users._id, INDEX]
+    refreshToken : String        [UNIQUE, REQUIRED]
+    expireAt     : Date          [REQUIRED, TTL Index]
+    createdAt    : Date
+    updatedAt    : Date
+    ---
+    Ràng buộc: Tối đa 3 session/user
+}
+
+}
+
+' =====================================================
+' NHÓM 2: DANH MỤC SẢN PHẨM
+' =====================================================
+
+together {
+
+class "producttypes" as producttypes <<Collection>> {
+    _id              : ObjectId    [PK]
+    name             : String      [UNIQUE, REQUIRED]
+    name_vi          : String      [REQUIRED]
+    listAttributeIds : ObjectId[]  [FK → attributes._id]
+    ---
+    Ý nghĩa: Loại sản phẩm (Áo, Giày, Vợt...)
+}
+
+class "attributes" as attributes <<Collection>> {
+    _id     : ObjectId    [PK]
+    name    : String      [REQUIRED]
+    name_vi : String      [REQUIRED]
+    type    : String      [ENUM: select|number|text]
+    options : String[]    [dùng khi type=select]
+    ---
+    Ý nghĩa: Thuộc tính (Màu, Size, Trọng lượng...)
+}
+
+}
+
+' =====================================================
+' NHÓM 3: SẢN PHẨM & ẢNH
+' =====================================================
+
+together {
+
+class "products" as products <<Collection>> {
+    _id             : ObjectId     [PK]
+    name            : String       [REQUIRED]
+    brand           : String       [REQUIRED]
+    productTypeId   : ObjectId     [FK → producttypes._id, REQUIRED]
+    price           : Number       [REQUIRED, min:0]
+    salePercent     : Number       [0..100, default:0]
+    saleStartAt     : Date
+    saleEndAt       : Date
+    warranty        : String
+    stock           : Number       [default:0]
+    hasVariants     : Boolean      [default:false]
+    availableSizes  : String[]
+    availableColors : Object[]     [{name, code}]
+    defaultImageId  : ObjectId     [FK → images._id]
+    imageIds        : ObjectId[]   [FK → images._id]
+    description     : String
+    createdAt       : Date
+    updatedAt       : Date
+    --- EMBEDDED ---
+    attributes[]    : Object       [{attributeId, value}]
+    variants[]      : Object       [VariantSchema]
+}
+
+class "images" as images <<Collection>> {
+    _id       : ObjectId    [PK]
+    url_Image : String      [REQUIRED, Cloudinary URL]
+    productId : ObjectId    [FK → products._id]
+}
+
+class "VariantSchema (embedded)" as variant {
+    sku            : String
+    size           : String
+    color          : String
+    colorCode      : String
+    stock          : Number
+    priceAdjustment: Number
+    imageId        : ObjectId   [FK → images._id]
+    isActive       : Boolean    [default:true]
+}
+
+}
+
+' =====================================================
+' NHÓM 4: GIỎ HÀNG & ĐẶT HÀNG
+' =====================================================
+
+together {
+
+class "carts" as carts <<Collection>> {
+    _id       : ObjectId    [PK]
+    userId    : ObjectId    [FK → users._id, UNIQUE]
+    createdAt : Date
+    updatedAt : Date
+    --- EMBEDDED ---
+    items[]   : Object      [CartItemSchema]
+}
+
+class "CartItemSchema (embedded)" as cartitem {
+    productId   : ObjectId    [FK → products._id]
+    variantId   : String
+    variantInfo : Object      [{size, color, colorCode, sku}]
+    quantity    : Number      [min:1]
+    addedAt     : Date
+}
+
+class "orders" as orders <<Collection>> {
+    _id             : ObjectId    [PK]
+    orderCode       : String      [UNIQUE, auto: TN+yyyymmdd+random6]
+    userId          : ObjectId    [FK → users._id, REQUIRED]
+    subtotal        : Number
+    shippingFee     : Number      [default:0]
+    total           : Number
+    paymentMethod   : String      [ENUM: cod|vnpay]
+    paymentStatus   : String      [ENUM: unpaid|paid|failed]
+    status          : String      [ENUM: pending|approved|rejected|
+                                   shipping|cancelled|delivered]
+    note            : String
+    rejectionReason : String
+    deliveredAt     : Date
+    createdAt       : Date
+    updatedAt       : Date
+    --- EMBEDDED ---
+    items[]          : Object     [OrderItemSchema]
+    shippingAddress  : Object     [ShippingAddressSchema]
+    statusHistory[]  : Object     [{status, changedAt, changedBy, note}]
+}
+
+class "OrderItemSchema (embedded)" as orderitem {
+    productId    : ObjectId    [FK → products._id]
+    variantId    : String
+    variantInfo  : Object
+    productName  : String      [snapshot lúc đặt hàng]
+    productImage : String      [snapshot URL]
+    price        : Number      [snapshot giá gốc]
+    salePercent  : Number
+    finalPrice   : Number      [giá sau giảm]
+    quantity     : Number
+    subtotal     : Number
+}
+
+}
+
+' =====================================================
+' NHÓM 5: NỘI DUNG & LIÊN HỆ
+' =====================================================
+
+together {
+
+class "articles" as articles <<Collection>> {
+    _id         : ObjectId    [PK]
+    title       : String      [REQUIRED]
+    slug        : String      [UNIQUE, auto-gen từ title]
+    excerpt     : String      [REQUIRED, max:500]
+    content     : String      [REQUIRED]
+    thumbnail   : String      [URL]
+    images      : String[]    [URL[]]
+    videoUrl    : String
+    category    : String      [ENUM: tin-tuc|review|meo-hay|kien-thuc]
+    tags        : String[]
+    author      : ObjectId    [FK → users._id]
+    status      : String      [ENUM: draft|published|archived]
+    publishedAt : Date
+    viewCount   : Number      [default:0]
+    featured    : Boolean     [default:false]
+    createdAt   : Date
+    updatedAt   : Date
+}
+
+class "contactmessages" as contact <<Collection>> {
+    _id        : ObjectId    [PK]
+    name       : String      [REQUIRED]
+    email      : String      [REQUIRED]
+    phone      : String
+    subject    : String
+    message    : String      [REQUIRED]
+    status     : String      [ENUM: new|in_progress|handled]
+    reply      : String
+    assignedTo : ObjectId    [FK → users._id]
+    createdAt  : Date
+    updatedAt  : Date
+}
+
+}
+
+' =====================================================
+' NHÓM 6: CHAT HỖ TRỢ
+' =====================================================
+
+together {
+
+class "conversations" as conversations <<Collection>> {
+    _id          : ObjectId    [PK]
+    participants : ObjectId[]  [FK → users._id, min:2]
+    unreadCount  : Map<uid, Number>
+    createdAt    : Date
+    updatedAt    : Date
+    --- EMBEDDED ---
+    lastMessage  : Object      [{content, sender, createdAt}]
+    ---
+    Index: participants (1), updatedAt (-1)
+}
+
+class "messages" as messages <<Collection>> {
+    _id            : ObjectId    [PK]
+    conversationId : ObjectId    [FK → conversations._id, INDEX]
+    sender         : ObjectId    [FK → users._id, INDEX]
+    receiver       : ObjectId    [FK → users._id, INDEX]
+    content        : String      [REQUIRED, max:5000]
+    type           : String      [ENUM: text|image|file]
+    isRead         : Boolean     [default:false]
+    createdAt      : Date
+    updatedAt      : Date
+    ---
+    Index: {conversationId, createdAt(-1)}, {sender, receiver}
+}
+
+}
+
+' =====================================================
+' RELATIONSHIPS
+' =====================================================
+
+users "1" --o{ sessions : "userId"
+users "1" --o| carts : "userId (1-1)"
+users "1" --o{ orders : "userId"
+users "1" --o{ articles : "author"
+users }o--o{ conversations : "participants[]"
+users "1" --o{ messages : "sender / receiver"
+users "1" --o{ contact : "assignedTo"
+
+producttypes "1" --o{ products : "productTypeId"
+producttypes "N" }o--o{ "N" attributes : "listAttributeIds[]"
+
+products *-- variant : "variants[] embedded"
+products "1" --o{ images : "productId"
+
+carts *-- cartitem : "items[] embedded"
+cartitem }o-- products : "productId"
+
+orders *-- orderitem : "items[] embedded"
+orderitem }o-- products : "productId (snapshot)"
+
+conversations "1" --o{ messages : "conversationId"
+
+@enduml

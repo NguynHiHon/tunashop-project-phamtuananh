@@ -1,0 +1,71 @@
+@startuml SD05_AI_Advisor
+
+scale 1.4
+skinparam monochrome true
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title <size:15><b>SD05 — Tư Vấn AI (AI Advisor)</b></size>
+
+actor "Khách Hàng" as User
+participant "ProductDetailPage\n/ HomePage\n(Frontend)" as UI
+participant "AIAdvisorRouter\nPOST /ai-advisor" as Router
+participant "AIAdvisorController" as Ctrl
+participant "Gemini AI\n(Google GenAI)" as Gemini
+participant "Groq AI\n(Llama Fallback)" as Groq
+database "MongoDB\n(Product / ProductType)" as DB
+
+== Mở giao diện tư vấn ==
+User -> UI : Nhấn "Tư vấn AI"
+UI --> User : Hiển thị Modal:\n- Ngân sách (min/max)\n- Thương hiệu\n- Loại sản phẩm\n- Mô tả nhu cầu
+
+== Gửi yêu cầu tư vấn ==
+User -> UI : Điền bộ lọc và\nnhấn "Tư vấn ngay"
+UI -> Router : POST /api/ai-advisor\n{ budget, brand,\n  productType, description }
+Router -> Ctrl : getAdvisorRecommendation(req, res)
+
+== Lấy sản phẩm từ DB ==
+Ctrl -> DB : Product.find(query)\n.populate('productTypeId')\n.limit(40)
+note right of DB
+  query lọc theo:
+  - brand (regex)
+  - productTypeId
+  - price range
+end note
+DB --> Ctrl : products[]
+
+== Xây dựng prompt ==
+Ctrl -> Ctrl : Format danh sách SP\n(ID, tên, giá, loại, mô tả)
+Ctrl -> Ctrl : Lấy tên loại SP đang lọc
+Ctrl -> Ctrl : Build prompt:\n"Dựa vào danh sách SP...\nKhách cần: [description]\nNgân sách: [budget]\n→ Tư vấn 3 SP phù hợp nhất"
+
+== Gọi AI ==
+Ctrl -> Gemini : ai.models.generateContent(prompt)\nmodel: gemini-2.0-flash
+
+alt Gemini thành công
+  Gemini --> Ctrl : responseText
+else Gemini lỗi (400/503/429)
+  Ctrl -> Groq : groq.chat.completions.create()\nmodel: llama-3.3-70b-versatile
+  note right of Groq
+    Fallback tự động
+    khi Gemini bị block IP
+    hoặc quá tải
+  end note
+  Groq --> Ctrl : responseText
+end
+
+== Parse & trả kết quả ==
+Ctrl -> Ctrl : Parse JSON từ AI response\n→ Trích xuất productIds[]
+Ctrl -> DB : Image.findOne({ productId })\nLấy ảnh cho từng SP gợi ý
+DB --> Ctrl : Image URLs
+Ctrl --> UI : 200 {\n  advice: "...",\n  products: [ { _id, name,\n    price, image } ]\n}
+
+== Hiển thị kết quả ==
+UI --> User : Hiển thị lời tư vấn AI\nvà danh sách SP gợi ý
+User -> UI : Nhấn vào SP gợi ý
+UI --> User : Chuyển đến\nProductDetailPage
+
+@enduml

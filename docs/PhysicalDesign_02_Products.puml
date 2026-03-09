@@ -1,0 +1,106 @@
+@startuml PhysicalDesign_02_Products
+' =============================================
+'  Vật lý - Nhóm 2: Sản phẩm & Danh mục
+'  producttypes · attributes · images · products
+' =============================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 60
+skinparam ranksep 80
+scale 1.5
+top to bottom direction
+hide empty methods
+hide circle
+
+class "producttypes" as pt <<Collection>> {
+    _id              : ObjectId       [PK]
+    name             : String(100)    [UNIQUE, REQUIRED]
+    name_vi          : String(100)    [REQUIRED]
+    listAttributeIds : ObjectId[]     [FK → attributes._id]
+    ==
+    INDEX unique : { name : 1 }
+    ....
+    Ví dụ: "badminton-racket" / "Vợt Cầu Lông"
+    Số lượng dự kiến: ~50 documents
+}
+
+class "attributes" as attr <<Collection>> {
+    _id     : ObjectId       [PK]
+    name    : String(100)    [REQUIRED]
+    name_vi : String(100)    [REQUIRED]
+    type    : String(10)     [ENUM: select | number | text]
+    options : String[]       [dùng khi type = select, max ~20]
+    ==
+    INDEX : { type : 1 }
+    ....
+    Ví dụ: name="Brand", type="select",
+    options=["VNB","Yonex","Victor"]
+    Số lượng dự kiến: ~30 documents
+}
+
+class "images" as img <<Collection>> {
+    _id       : ObjectId       [PK]
+    url_Image : String(500)    [REQUIRED — Cloudinary HTTPS URL]
+    productId : ObjectId       [FK → products._id]
+    ==
+    INDEX : { productId : 1 }
+    ....
+    Lưu trữ: Cloudinary CDN (không lưu binary trong MongoDB)
+    Kích thước avg: ~0.2 KB/doc
+}
+
+class "products" as prod <<Collection>> {
+    _id              : ObjectId      [PK]
+    name             : String(200)   [REQUIRED]
+    brand            : String(100)   [REQUIRED]
+    productTypeId    : ObjectId      [FK → producttypes._id]
+    price            : Double        [REQUIRED, VNĐ]
+    salePercent      : Int32         [0..100, default: 0]
+    saleStartAt      : Date
+    saleEndAt        : Date
+    warranty         : String(200)
+    stock            : Int32         [default: 0]
+    hasVariants      : Boolean       [default: false]
+    availableSizes   : String[]
+    availableColors  : Object[]      [{name: String, code: String}]
+    defaultImageId   : ObjectId      [FK → images._id]
+    imageIds         : ObjectId[]    [FK → images._id]
+    description      : String        [HTML content, không giới hạn]
+    createdAt        : Date
+    updatedAt        : Date
+    ---- EMBEDDED: attributes[] ----
+    attributes.attributeId  : ObjectId
+    attributes.value        : String
+    ---- EMBEDDED: variants[] ----
+    variants.sku             : String(50)
+    variants.size            : String(20)
+    variants.color           : String(50)
+    variants.colorCode       : String(10)   [hex màu, e.g. "#FF0000"]
+    variants.stock           : Int32
+    variants.priceAdjustment : Double       [± so với giá gốc]
+    variants.imageId         : ObjectId     [FK → images._id]
+    variants.isActive        : Boolean
+    ==
+    INDEX        : { productTypeId : 1 }
+    INDEX        : { brand : 1 }
+    INDEX        : { price : 1 }
+    INDEX        : { "attributes.attributeId" : 1 }
+    TEXT INDEX   : { name, description }
+    ....
+    Kích thước avg: ~5 KB/doc (có variants)
+}
+
+pt "1" -down-> "N" prod : "productTypeId"
+pt "N" ..> "N" attr : "listAttributeIds[]"
+prod "1" -right-> "N" img : "productId\n(1 product → nhiều ảnh)"
+
+@enduml

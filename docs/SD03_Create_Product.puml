@@ -1,0 +1,81 @@
+@startuml SD03_Create_Product
+
+scale 1.4
+skinparam monochrome true
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title <size:15><b>SD03 — Tạo Sản Phẩm (Admin)</b></size>\n<size:11>Bao gồm kiểm tra Loại SP & Thuộc Tính</size>
+
+actor "Admin" as Admin
+participant "ProductCreate\n(Frontend)" as UI
+participant "ProductRouter\nPOST /products" as Router
+participant "AuthMiddleware" as Auth
+participant "ProductController" as Ctrl
+participant "ProductService" as Svc
+database "MongoDB\n(Product / ProductType\n/ Attribute / Image)" as DB
+
+== Tải form ==
+Admin -> UI : Vào trang Tạo Sản Phẩm
+UI -> DB : GET /api/product-types\n→ Lấy danh sách loại SP
+DB --> UI : [ { _id, name_vi, attributes } ]
+UI -> DB : GET /api/attributes\n→ Lấy danh sách thuộc tính
+DB --> UI : [ { _id, name, values } ]
+UI --> Admin : Hiển thị form với\ndropdown loại SP & thuộc tính
+
+== Điền thông tin & Submit ==
+Admin -> UI : Nhập name, brand, giá,\nchọn productTypeId,\ngán attributes, upload ảnh
+UI -> Router : POST /api/products\n{ name, brand, productTypeId,\n  attributes, price, stock,\n  images[], hasVariants, ... }
+Router -> Auth : verifyAccessToken(req)
+Auth --> Router : req.user { role: 'admin' }
+
+== Validation cơ bản ==
+Router -> Ctrl : createProduct(req, res)
+Ctrl -> Svc : createProduct(payload)
+Svc -> Svc : Validate: name, productTypeId,\nprice, stock, salePercent,\nattributes format, image URLs
+
+alt Validation thất bại
+  Svc --> Ctrl : throw Error(400, details[])
+  Ctrl --> UI : 400 { errors: [...] }
+  UI --> Admin : Hiển thị lỗi từng trường
+end
+
+== Kiểm tra Loại Sản Phẩm ==
+Svc -> DB : ProductType.findById(productTypeId)
+DB --> Svc : ProductType document
+alt Không tìm thấy loại SP
+  Svc --> Ctrl : throw Error(404, 'ProductType not found')
+  Ctrl --> UI : 404 { message }
+  UI --> Admin : "Loại sản phẩm không tồn tại"
+end
+
+== Kiểm tra Thuộc Tính ==
+loop với mỗi attribute trong payload
+  Svc -> DB : Attribute.findById(attributeId)
+  DB --> Svc : Attribute document
+  alt Thuộc tính không hợp lệ
+    Svc --> Ctrl : throw Error(400, 'Invalid attributeId')
+    Ctrl --> UI : 400 { message }
+    UI --> Admin : "Thuộc tính không hợp lệ"
+  end
+end
+
+== Lưu sản phẩm ==
+Svc -> DB : Product.save()\n{ name, brand, productTypeId,\n  attributes, price, stock, ... }
+DB --> Svc : Product { _id }
+
+== Lưu ảnh ==
+loop với mỗi URL trong images[]
+  Svc -> DB : Image.save({ url_Image, productId })
+  DB --> Svc : Image { _id }
+end
+Svc -> DB : product.imageIds = [...imageIds]\nproduct.defaultImageId = imageIds[0]\nproduct.save()
+DB --> Svc : Product updated
+Svc --> Ctrl : product
+Ctrl --> UI : 201 { message: 'Product created', data: product }
+UI --> Admin : "Tạo sản phẩm thành công!"\nChuyển về danh sách SP
+
+@enduml

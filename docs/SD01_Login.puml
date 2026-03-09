@@ -1,0 +1,67 @@
+@startuml SD01_Login
+
+scale 1.4
+skinparam monochrome true
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title <size:15><b>SD01 — Đăng Nhập (SignIn)</b></size>
+
+actor "Người Dùng" as User
+participant "SignInPage\n(Frontend)" as UI
+participant "axiosJWT\n(Interceptor)" as Axios
+participant "AuthRouter\nPOST /auth/signin" as Router
+participant "AuthController" as Ctrl
+participant "AuthService" as Svc
+database "MongoDB\n(Users / Session)" as DB
+
+== Nhập thông tin ==
+User -> UI : Nhập username + password\nvà nhấn Đăng Nhập
+UI -> Router : POST /api/auth/signin\n{ username, password }
+Router -> Ctrl : signIn(req, res)
+Ctrl -> Svc : signIn(username, password)
+
+== Kiểm tra tài khoản ==
+Svc -> DB : User.findOne({ username })
+DB --> Svc : User document
+alt Không tìm thấy user
+  Svc --> Ctrl : throw Error(USER_NOT_FOUND, 404)
+  Ctrl --> UI : 404 { message: 'USER_NOT_FOUND' }
+  UI --> User : Hiển thị lỗi "Tài khoản không tồn tại"
+end
+
+== Kiểm tra mật khẩu ==
+Svc -> Svc : bcrypt.compare(password, hash)
+alt Sai mật khẩu
+  Svc --> Ctrl : throw Error(WRONG_PASSWORD, 401)
+  Ctrl --> UI : 401 { message: 'WRONG_PASSWORD' }
+  UI --> User : Hiển thị lỗi "Sai mật khẩu"
+end
+
+== Tạo Token & Session ==
+Svc -> Svc : generateAccessToken(user)\n(JWT, TTL = 5 phút)
+Svc -> Svc : generateRefreshToken(user)\n(JWT, TTL = 30 ngày)
+Svc -> DB : Session.create({ userId, refreshToken, expireAt })
+DB --> Svc : Session saved
+Svc -> DB : Xóa session cũ nếu > MAX_SESSIONS (3)
+Svc --> Ctrl : { user, refreshToken, accessToken }
+
+== Trả kết quả ==
+Ctrl -> Ctrl : Set-Cookie: refreshToken (httpOnly)
+Ctrl --> UI : 200 { user, accessToken }
+UI -> Axios : Lưu accessToken vào Redux store
+UI --> User : Chuyển hướng về Trang Chủ
+
+== Tự động làm mới Token (sau 5 phút) ==
+Axios -> Router : POST /api/auth/refresh-token\n(cookie: refreshToken)
+Router -> Ctrl : refreshToken(req, res)
+Ctrl -> DB : Session.findOne({ refreshToken })
+DB --> Ctrl : Session hợp lệ
+Ctrl -> Ctrl : generateAccessToken(user)
+Ctrl --> Axios : 200 { accessToken, user }
+Axios --> UI : Cập nhật accessToken mới
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml SD04_Add_Cart_Order
+
+scale 1.4
+skinparam monochrome true
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title <size:15><b>SD04 — Thêm Giỏ Hàng & Đặt Hàng COD</b></size>
+
+actor "Khách Hàng" as User
+participant "ProductDetailPage\n(Frontend)" as PUI
+participant "CartPage\n(Frontend)" as CUI
+participant "CheckoutPage\n(Frontend)" as CHUI
+participant "CartRouter\nPOST /cart" as CRouter
+participant "OrderRouter\nPOST /orders" as ORouter
+participant "CartService" as CSvc
+participant "OrderService" as OSvc
+database "MongoDB\n(Cart / Product / Order)" as DB
+participant "Socket\n(socketUtils)" as Socket
+actor "Admin" as Admin
+
+== Thêm vào giỏ hàng ==
+User -> PUI : Chọn sản phẩm, số lượng\nvà nhấn "Thêm vào giỏ"
+PUI -> CRouter : POST /api/cart\n{ productId, quantity, variantId }
+CRouter -> CSvc : addToCart(userId, productId,\n  quantity, variantId)
+CSvc -> DB : Product.findById(productId)
+DB --> CSvc : Product { stock, price }
+
+alt Không đủ tồn kho
+  CSvc --> PUI : 400 "Sản phẩm không đủ số lượng"
+  PUI --> User : Thông báo lỗi tồn kho
+end
+
+CSvc -> DB : Cart.findOne({ userId })\nhoặc Cart.create()
+CSvc -> DB : Cập nhật item trong cart\n(thêm mới hoặc tăng qty)
+DB --> CSvc : Cart updated
+CSvc --> PUI : 200 { cart }
+PUI --> User : Badge giỏ hàng cập nhật
+
+== Xem & chỉnh giỏ hàng ==
+User -> CUI : Vào trang Giỏ Hàng
+CUI -> DB : GET /api/cart
+DB --> CUI : Cart { items, totalPrice }
+CUI --> User : Hiển thị danh sách SP,\ntổng tiền
+User -> CUI : Thay đổi số lượng / xóa SP
+CUI -> CRouter : PUT /api/cart/:productId\n{ quantity }
+CRouter -> CSvc : updateCartItem(...)
+CSvc -> DB : Cập nhật qty
+DB --> CUI : Cart updated
+
+== Tiến hành đặt hàng ==
+User -> CHUI : Nhấn "Đặt hàng"\n→ vào trang Checkout
+CHUI --> User : Hiển thị form địa chỉ,\nphương thức COD
+User -> CHUI : Điền địa chỉ giao hàng\nvà xác nhận
+CHUI -> ORouter : POST /api/orders\n{ items, shippingAddress,\n  paymentMethod: 'cod' }
+ORouter -> OSvc : createOrder(userId, payload)
+
+== Kiểm tra & tạo đơn hàng ==
+OSvc -> DB : Kiểm tra tồn kho từng SP
+DB --> OSvc : Stock hợp lệ
+OSvc -> DB : Trừ tồn kho mỗi sản phẩm
+OSvc -> DB : Order.create({ items, status: 'pending',\n  paymentStatus: 'pending',\n  paymentMethod: 'cod' })
+DB --> OSvc : Order { _id, orderCode }
+OSvc -> DB : cartService.clearCart(userId)
+OSvc --> CHUI : 201 { order }
+
+== Thông báo Admin ==
+OSvc -> Socket : emitNewOrder(order)
+Socket --> Admin : Nhận thông báo đơn hàng mới\n(real-time qua WebSocket)
+
+CHUI --> User : "Đặt hàng thành công!\nMã đơn: #orderCode"
+User -> CHUI : Nhấn "Xem đơn hàng"
+CHUI --> User : Chuyển sang\nOrderHistoryPage
+
+@enduml

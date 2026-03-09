@@ -1,0 +1,75 @@
+@startuml PhysicalDesign_04_Content
+' =============================================
+'  Vật lý - Nhóm 4: Nội dung & Liên hệ
+'  articles · contactmessages
+' =============================================
+
+skinparam monochrome true
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ClassFontSize 14
+skinparam ClassAttributeFontSize 12
+skinparam ClassBorderColor #000000
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #EEEEEE
+skinparam ArrowColor #000000
+skinparam nodesep 80
+skinparam ranksep 100
+scale 1.5
+top to bottom direction
+hide empty methods
+hide circle
+
+class "articles" as articles <<Collection>> {
+    _id         : ObjectId       [PK]
+    title       : String(300)    [REQUIRED]
+    slug        : String(350)    [UNIQUE — auto: slugify(title) + "-" + Date.now(36)]
+    excerpt     : String(500)    [REQUIRED]
+    content     : String         [HTML, không giới hạn kích thước]
+    thumbnail   : String(500)    [REQUIRED — Cloudinary URL]
+    images      : String[]       [Cloudinary URL[]]
+    videoUrl    : String(500)
+    category    : String(20)     [ENUM: tin-tuc | review | meo-hay | kien-thuc]
+    tags        : String[]
+    author      : ObjectId       [FK → users._id, REQUIRED]
+    status      : String(10)     [ENUM: draft | published | archived]
+    publishedAt : Date           [set khi status → published]
+    viewCount   : Int32          [default: 0]
+    featured    : Boolean        [default: false]
+    createdAt   : Date
+    updatedAt   : Date
+    ==
+    INDEX unique  : { slug : 1 }
+    INDEX         : { status : 1, publishedAt : -1 }
+    INDEX         : { category : 1 }
+    INDEX         : { featured : 1 }
+    TEXT INDEX    : { title, excerpt, content }
+    ....
+    Kích thước avg: ~10–50 KB/doc (tùy nội dung HTML)
+    slug tự sinh từ title + timestamp base36 (tránh trùng)
+}
+
+class "contactmessages" as contact <<Collection>> {
+    _id        : ObjectId       [PK]
+    name       : String(100)    [REQUIRED]
+    email      : String(100)    [REQUIRED]
+    phone      : String(15)
+    subject    : String(200)
+    message    : String(2000)   [REQUIRED]
+    status     : String(15)     [ENUM: new | in_progress | handled]
+    reply      : String(2000)   [phản hồi của admin/staff]
+    assignedTo : ObjectId       [FK → users._id — người xử lý]
+    createdAt  : Date
+    updatedAt  : Date
+    ==
+    INDEX : { status : 1 }
+    INDEX : { createdAt : -1 }
+    ....
+    Gửi từ trang Liên hệ, không yêu cầu đăng nhập
+    assignedTo: admin/staff tiếp nhận xử lý
+}
+
+articles -[hidden]right- contact
+
+@enduml

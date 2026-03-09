@@ -1,0 +1,108 @@
+@startuml TunaShop_ScreenFlow_Admin
+
+scale 1.5
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 13
+skinparam defaultTextAlignment center
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam padding 6
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  FontSize 12
+  FontColor #000000
+}
+
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  FontSize 13
+  FontStyle bold
+  FontColor #000000
+}
+
+skinparam arrow {
+  Color #000000
+  FontSize 11
+}
+
+top to bottom direction
+
+title <size:16><b>Sơ Đồ Màn Hình — Quản Trị (Admin)</b></size>
+
+rectangle "<b>Đăng Nhập</b>\nSignInPage  |  /signin" as SignIn
+
+rectangle "<b>Dashboard - Tổng Quan</b>\nDashboardPage  |  /management" as ADash
+
+package "Đơn Hàng & Hỗ Trợ" as AP1 {
+  together {
+    rectangle "<b>Quản Lý Đơn Hàng</b>\nOrderManagement\n/management/orders" as AOrders
+    rectangle "<b>Chat Hỗ Trợ KH</b>\nSupportChatManagement\n/management/support-chat" as AChat
+  }
+}
+
+package "Nhân Sự & Tài Khoản" as AP2 {
+  together {
+    rectangle "<b>Danh Sách NV</b>\nEmployeeList\n/management/employees" as EmpList
+    rectangle "<b>Tạo NV</b>\nEmployeeCreate\n/employees/new" as EmpCreate
+    rectangle "<b>Chi Tiết NV</b>\nEmployeeShow\n/employees/:id" as EmpShow
+    rectangle "<b>Sửa NV</b>\nEmployeeEdit\n/employees/:id/edit" as EmpEdit
+    rectangle "<b>Tài Khoản KH</b>\nAccounts\n/management/accounts" as Accounts
+  }
+}
+
+package "Hàng Hoá & Kho" as AP3 {
+  together {
+    rectangle "<b>Loại Sản Phẩm</b>\nCategoryList\n/management/categories" as Categories
+    rectangle "<b>Danh Sách SP</b>\nProductList\n/management/products" as ProdList
+    rectangle "<b>Thêm SP</b>\nProductCreate\n/products/create" as ProdCreate
+    rectangle "<b>Sửa SP</b>\nProductEdit\n/products/:id/edit" as ProdEdit
+    rectangle "<b>Kho Hàng</b>\nWarehouseManagement\n/management/warehouse" as Warehouse
+  }
+}
+
+package "Nội Dung & Báo Cáo" as AP4 {
+  together {
+    rectangle "<b>Bài Viết</b>\nArticleManagement\n/management/articles" as Articles
+    rectangle "<b>Sự Kiện / KM</b>\nSaleManager\n/activities/events" as Events
+    rectangle "<b>Báo Cáo Doanh Thu</b>\nSalesReportPage\n/management/sales" as SalesReport
+    rectangle "<b>Yêu Cầu Liên Hệ</b>\nContactRequests\n/management/contacts" as Contacts
+  }
+}
+
+' Ép layout dọc
+SignIn -[hidden]down-> ADash
+ADash  -[hidden]down-> AP1
+AP1    -[hidden]down-> AP2
+AP2    -[hidden]down-> AP3
+AP3    -[hidden]down-> AP4
+
+' Flow
+SignIn  -down->  ADash   : Đăng nhập [admin]
+
+ADash   -down->  AOrders : Quản lý đơn hàng
+ADash   -down->  AChat   : Chat hỗ trợ KH
+AOrders -right-> AChat   : Xem chat liên quan đơn
+
+ADash   -down->  EmpList   : Quản lý nhân viên
+EmpList -right-> EmpCreate : Thêm NV mới
+EmpList -down->  EmpShow   : Xem chi tiết
+EmpShow -right-> EmpEdit   : Chỉnh sửa NV
+ADash   -down->  Accounts  : Tài khoản KH
+
+ADash    -down->  Categories : Loại sản phẩm
+ADash    -down->  ProdList   : Danh sách SP
+ProdList -right-> ProdCreate : Thêm SP mới
+ProdList -down->  ProdEdit   : Sửa SP
+ADash    -down->  Warehouse  : Kho hàng
+
+ADash -down-> Articles    : Bài viết
+ADash -down-> Events      : Sự kiện / KM
+ADash -down-> SalesReport : Báo cáo doanh thu
+ADash -down-> Contacts    : Yêu cầu liên hệ
+
+@enduml

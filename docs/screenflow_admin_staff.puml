@@ -1,0 +1,58 @@
+@startuml TunaShop_ScreenFlow_Staff
+
+scale 1.5
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 13
+skinparam defaultTextAlignment center
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam padding 6
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  FontSize 12
+  FontColor #000000
+}
+
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  FontSize 13
+  FontStyle bold
+  FontColor #000000
+}
+
+skinparam arrow {
+  Color #000000
+  FontSize 11
+}
+
+top to bottom direction
+
+title <size:16><b>Sơ Đồ Màn Hình — Nhân Viên (Staff)</b></size>
+
+rectangle "<b>Đăng Nhập</b>\nSignInPage  |  /signin" as SignIn
+
+package "STAFF — Màn hình được phép truy cập" as S {
+  rectangle "<b>Dashboard - Tổng Quan</b>\nDashboardPage  |  /management" as SDash
+
+  rectangle "<b>Quản Lý Đơn Hàng</b>\nOrderManagement\n/management/orders" as SOrders
+
+  rectangle "<b>Chat Hỗ Trợ Khách Hàng</b>\nSupportChatManagement\n/management/support-chat" as SChat
+
+  SDash   -[hidden]down-> SOrders
+  SOrders -[hidden]down-> SChat
+}
+
+SignIn -[hidden]down-> S
+
+' Flow
+SignIn  -down->  SDash   : Đăng nhập [staff]
+SDash   -down->  SOrders : Xem & xử lý đơn hàng
+SDash   -down->  SChat   : Chat hỗ trợ khách hàng
+SOrders -right-> SChat   : Xem chat liên quan đơn
+
+@enduml
