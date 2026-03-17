@@ -11,6 +11,10 @@ import {
     Paper,
     Alert,
     Snackbar,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import Grid from '@mui/material/GridLegacy';
 import {
@@ -32,6 +36,7 @@ const ContactPage = () => {
         email: '',
         phone: '',
         subject: '',
+        contactType: 'general',
         message: '',
     });
     const [loading, setLoading] = useState(false);
@@ -63,13 +68,14 @@ const ContactPage = () => {
                 email: formData.email,
                 phone: formData.phone,
                 subject: formData.subject,
+                contactType: formData.contactType,
                 message: formData.message,
             };
             const res = await (await import('../services/contactService')).default.send(payload);
             setLoading(false);
             setSuccess(true);
             toast.success('Gửi tin nhắn thành công! Nhân viên sẽ liên hệ lại sớm.');
-            setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+            setFormData({ name: '', email: '', phone: '', subject: '', contactType: 'general', message: '' });
         } catch (err) {
             setLoading(false);
             toast.error(err?.response?.data?.message || err?.message || 'Gửi tin thất bại');
@@ -218,6 +224,21 @@ const ContactPage = () => {
                                         onChange={handleChange}
                                         variant="outlined"
                                     />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Loại liên hệ</InputLabel>
+                                        <Select
+                                            label="Loại liên hệ"
+                                            name="contactType"
+                                            value={formData.contactType}
+                                            onChange={handleChange}
+                                        >
+                                            <MenuItem value="general">Tư vấn chung</MenuItem>
+                                            <MenuItem value="return">Hoàn hàng</MenuItem>
+                                            <MenuItem value="warranty">Yêu cầu bảo hành</MenuItem>
+                                        </Select>
+                                    </FormControl>
                                 </Grid>
                                 <Grid item xs={12}>
                                     <TextField

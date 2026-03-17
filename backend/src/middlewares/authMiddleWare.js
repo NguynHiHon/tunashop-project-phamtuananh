@@ -36,7 +36,16 @@ const authMiddleWare = {
             }
             next();
         });
-    }
+    },
+
+    verifyAdminOrStaff: (req, res, next) => {
+        authMiddleWare.verifyAccessToken(req, res, () => {
+            if (!['admin', 'staff'].includes(req.user.role)) {
+                return res.status(403).json({ message: 'Yêu cầu quyền admin hoặc staff' });
+            }
+            next();
+        });
+    },
 };
 
 module.exports = authMiddleWare;

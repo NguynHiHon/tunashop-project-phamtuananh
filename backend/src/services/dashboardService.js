@@ -91,6 +91,7 @@ const getOverviewStats = async () => {
         shipping: 0,
         cancelled: 0,
         delivered: 0,
+        returned: 0,
     };
     let totalOrdersCount = 0;
     orderStats.forEach(s => {
@@ -119,6 +120,7 @@ const getOverviewStats = async () => {
             processing: orderStatusStats.approved + orderStatusStats.shipping,
             completed: orderStatusStats.delivered,
             cancelled: orderStatusStats.cancelled + orderStatusStats.rejected,
+            returned: orderStatusStats.returned,
         },
         revenue: {
             total: Math.round(revenue.totalRevenue),

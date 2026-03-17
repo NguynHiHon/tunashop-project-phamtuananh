@@ -22,7 +22,7 @@ import DashboardSidebarDividerItem from './DashboardSidebarDividerItem';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ProductionQuantityLimitsIcon from '@mui/icons-material/ProductionQuantityLimits';
 import CategoryIcon from '@mui/icons-material/Category';
-import { Money, Chat as ChatIcon } from '@mui/icons-material';
+import { Money, Chat as ChatIcon, AssignmentReturn } from '@mui/icons-material';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import EventIcon from '@mui/icons-material/Event';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
@@ -178,6 +178,13 @@ function DashboardSidebar({
                     icon={<ListOrderedIcon />}
                     href="/management/orders"
                     selected={!!matchPath('/management/orders', pathname)}
+                  />
+                  <DashboardSidebarPageItem
+                    id="returns"
+                    title="Hoàn hàng"
+                    icon={<AssignmentReturn />}
+                    href="/management/returns"
+                    selected={!!matchPath('/management/returns', pathname)}
                   />
                 </List>
               }

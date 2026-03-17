@@ -72,6 +72,7 @@ const STATUS_CONFIG = {
     shipping: { label: 'Đang giao', color: 'primary', icon: '🚚' },
     cancelled: { label: 'Đã hủy', color: 'default', icon: '🚫' },
     delivered: { label: 'Đã giao', color: 'success', icon: '✅' },
+    returned: { label: 'Hoàn hàng', color: 'secondary', icon: '↩️' },
 };
 
 const OrderManagement = () => {
@@ -219,6 +220,7 @@ const OrderManagement = () => {
                             <TableCell sx={{ fontWeight: 'bold' }}>Khách hàng</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Số sản phẩm</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Tổng tiền</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Hoàn</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Trạng thái</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Ngày đặt</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }} align="center">
@@ -229,13 +231,13 @@ const OrderManagement = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                                     <CircularProgress />
                                 </TableCell>
                             </TableRow>
                         ) : filteredOrders.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                                     <Typography color="text.secondary">Không có đơn hàng nào</Typography>
                                 </TableCell>
                             </TableRow>
@@ -266,6 +268,23 @@ const OrderManagement = () => {
                                                 <Typography fontWeight="600" color="primary">
                                                     {formatPrice(order.total)}
                                                 </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                {order.returnSummary ? (
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Đã hoàn: {formatPrice(order.returnSummary.returnedAmount)}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Còn lại: {formatPrice(order.returnSummary.remainingAmount)}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            SP: {order.returnSummary.returnedQty}/{order.returnSummary.totalQty}
+                                                        </Typography>
+                                                    </Box>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary">-</Typography>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
@@ -469,6 +488,23 @@ const OrderManagement = () => {
                                                     {formatPrice(currentOrder.total)}
                                                 </Typography>
                                             </Box>
+                                            {currentOrder.returnSummary && (
+                                                <Box sx={{ mt: 1, alignSelf: 'stretch' }}>
+                                                    <Divider sx={{ my: 1 }} />
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <Typography color="text.secondary">Đã hoàn:</Typography>
+                                                        <Typography>{formatPrice(currentOrder.returnSummary.returnedAmount)}</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <Typography color="text.secondary">Còn lại:</Typography>
+                                                        <Typography>{formatPrice(currentOrder.returnSummary.remainingAmount)}</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <Typography color="text.secondary">SP đã hoàn:</Typography>
+                                                        <Typography>{currentOrder.returnSummary.returnedQty} / {currentOrder.returnSummary.totalQty}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            )}
                                         </Box>
                                     </CardContent>
                                 </Card>
@@ -496,6 +532,54 @@ const OrderManagement = () => {
                                                         <Typography variant="body2" color="text.secondary">
                                                             - {history.note}
                                                         </Typography>
+                                                    )}
+                                                </Box>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            )}
+
+                            {currentOrder.returnRecords?.length > 0 && (
+                                <Grid item xs={12}>
+                                    <Card variant="outlined">
+                                        <CardContent>
+                                            <Typography variant="h6" gutterBottom>
+                                                Chi tiết hoàn hàng
+                                            </Typography>
+                                            {currentOrder.returnSummary && (
+                                                <Box sx={{ mb: 2 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Tổng SP: {currentOrder.returnSummary.totalQty} | Đã hoàn: {currentOrder.returnSummary.returnedQty} | Còn lại: {currentOrder.returnSummary.remainingQty}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Tiền hàng: {formatPrice(currentOrder.returnSummary.originalAmount)} | Đã hoàn: {formatPrice(currentOrder.returnSummary.returnedAmount)} | Còn lại: {formatPrice(currentOrder.returnSummary.remainingAmount)}
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                            {currentOrder.returnRecords.map((record, idx) => (
+                                                <Box key={idx} sx={{ mb: 2 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {formatDate(record.createdAt)} - {record.processedBy?.username || 'Hệ thống'}
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        Lý do: {record.reason || '-'}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                                        Số tiền hoàn: {formatPrice(record.refundAmount)}
+                                                    </Typography>
+                                                    <List disablePadding>
+                                                        {(record.items || []).map((item, itemIdx) => (
+                                                            <ListItem key={itemIdx} sx={{ px: 0 }}>
+                                                                <ListItemText
+                                                                    primary={`${item.productName} x ${item.quantity}`}
+                                                                    secondary={formatPrice(item.total)}
+                                                                />
+                                                            </ListItem>
+                                                        ))}
+                                                    </List>
+                                                    {idx < currentOrder.returnRecords.length - 1 && (
+                                                        <Divider sx={{ mt: 1 }} />
                                                     )}
                                                 </Box>
                                             ))}

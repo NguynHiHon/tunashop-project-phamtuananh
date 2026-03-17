@@ -9,6 +9,7 @@ const contactController = {
                 email: req.body.email,
                 phone: req.body.phone,
                 subject: req.body.subject,
+                contactType: req.body.contactType,
                 message: req.body.message,
             };
 

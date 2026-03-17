@@ -1,9 +1,54 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
+const Return = require('../models/Return');
 
 const SHIPPING_THRESHOLD = 500000; // Free shipping for orders >= 500k
 const SHIPPING_FEE = 50000; // 50k shipping fee
+
+const normalizeVariantId = (variantId) => (variantId ? variantId.toString() : '');
+const buildItemKey = (productId, variantId) => `${productId.toString()}|${normalizeVariantId(variantId)}`;
+
+const buildReturnSummary = (orderItems, returnRecords) => {
+    const returnedQtyMap = new Map();
+
+    returnRecords.forEach((record) => {
+        (record.items || []).forEach((item) => {
+            const key = buildItemKey(item.productId, item.variantId);
+            const prev = returnedQtyMap.get(key) || 0;
+            returnedQtyMap.set(key, prev + item.quantity);
+        });
+    });
+
+    let totalQty = 0;
+    let returnedQty = 0;
+    let remainingQty = 0;
+    let originalAmount = 0;
+    let returnedAmount = 0;
+
+    (orderItems || []).forEach((item) => {
+        const key = buildItemKey(item.productId, item.variantId);
+        const originalQty = item.quantity || 0;
+        const alreadyReturned = returnedQtyMap.get(key) || 0;
+        const remaining = Math.max(0, originalQty - alreadyReturned);
+        const unitPrice = item.finalPrice || 0;
+
+        totalQty += originalQty;
+        returnedQty += alreadyReturned;
+        remainingQty += remaining;
+        originalAmount += unitPrice * originalQty;
+        returnedAmount += unitPrice * alreadyReturned;
+    });
+
+    return {
+        totalQty,
+        returnedQty,
+        remainingQty,
+        originalAmount: Math.round(originalAmount),
+        returnedAmount: Math.round(returnedAmount),
+        remainingAmount: Math.round(Math.max(0, originalAmount - returnedAmount)),
+    };
+};
 
 // Calculate shipping fee based on subtotal
 const calculateShippingFee = (subtotal) => {
@@ -218,6 +263,19 @@ const getOrderById = async (orderId, userId = null) => {
         throw new Error('Không tìm thấy đơn hàng');
     }
 
+    const returnRecords = await Return.find({ orderId: order._id })
+        .sort({ createdAt: -1 })
+        .populate('processedBy', 'username role')
+        .select('items refundAmount reason processedBy createdAt');
+    if (returnRecords.length > 0) {
+        const orderObj = order.toObject();
+        return {
+            ...orderObj,
+            returnSummary: buildReturnSummary(orderObj.items, returnRecords),
+            returnRecords,
+        };
+    }
+
     return order;
 };
 
@@ -253,8 +311,27 @@ const getAllOrders = async (options = {}) => {
         },
     ]);
 
+    const orderIds = orders.map((order) => order._id);
+    const returnRecords = await Return.find({ orderId: { $in: orderIds } }).select('orderId items');
+    const returnsByOrder = new Map();
+
+    returnRecords.forEach((record) => {
+        const key = record.orderId.toString();
+        if (!returnsByOrder.has(key)) returnsByOrder.set(key, []);
+        returnsByOrder.get(key).push(record);
+    });
+
+    const data = orders.map((order) => {
+        const orderObj = order.toObject();
+        const records = returnsByOrder.get(order._id.toString()) || [];
+        if (records.length > 0) {
+            orderObj.returnSummary = buildReturnSummary(orderObj.items, records);
+        }
+        return orderObj;
+    });
+
     return {
-        data: orders,
+        data,
         total,
         page,
         totalPages: Math.ceil(total / limit),
@@ -270,7 +347,8 @@ const updateOrderStatus = async (orderId, newStatus, adminId, note = '') => {
         shipping: ['delivered', 'cancelled'],
         rejected: [],
         cancelled: [],
-        delivered: [],
+        delivered: ['returned'],
+        returned: [],
     };
 
     const order = await Order.findById(orderId);

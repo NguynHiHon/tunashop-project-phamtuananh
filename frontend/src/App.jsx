@@ -43,6 +43,7 @@ import OrderHistoryPage from './pages/OrderHistoryPage'
 import ArticleListPage from './pages/ArticleListPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
 import OrderManagement from './pages/Admin-Management/OrderManagement'
+import ReturnManagement from './pages/Admin-Management/ReturnManagement'
 import DashboardPage from './pages/Admin-Management/DashboardPage'
 import ArticleManagement from './pages/Admin-Management/ArticleManagement'
 import SalesReportPage from './pages/Admin-Management/SalesReportPage'
@@ -128,6 +129,7 @@ function App() {
 
               {/* Orders & Support Chat - Admin & Staff can access */}
               <Route path='orders' element={<OrderManagement />} />
+              <Route path='returns' element={<ReturnManagement />} />
               <Route path='support-chat' element={<SupportChatManagement />} />
 
               {/* Admin only routes */}

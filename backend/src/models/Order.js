@@ -115,7 +115,7 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'shipping', 'cancelled', 'delivered'],
+        enum: ['pending', 'approved', 'rejected', 'shipping', 'cancelled', 'delivered', 'returned'],
         default: 'pending',
     },
     statusHistory: [{
@@ -158,6 +158,7 @@ orderSchema.virtual('statusText').get(function () {
         shipping: 'Đang giao hàng',
         cancelled: 'Đã hủy',
         delivered: 'Giao thành công',
+        returned: 'Hoàn hàng',
     };
     return statusMap[this.status] || this.status;
 });

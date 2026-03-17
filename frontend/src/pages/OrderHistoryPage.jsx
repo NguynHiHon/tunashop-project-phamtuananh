@@ -66,6 +66,7 @@ const STATUS_CONFIG = {
     shipping: { label: 'Đang giao', color: 'primary', icon: <LocalShipping /> },
     cancelled: { label: 'Đã hủy', color: 'default', icon: <Cancel /> },
     delivered: { label: 'Đã giao', color: 'success', icon: <CheckCircle /> },
+    returned: { label: 'Hoàn hàng', color: 'secondary', icon: <Cancel /> },
 };
 
 const OrderHistoryPage = () => {
@@ -129,6 +130,7 @@ const OrderHistoryPage = () => {
         { label: 'Đang xử lý', value: 'approved' },
         { label: 'Đang giao', value: 'shipping' },
         { label: 'Đã giao', value: 'delivered' },
+        { label: 'Hoàn hàng', value: 'returned' },
         { label: 'Đã hủy', value: 'cancelled' },
     ];
 

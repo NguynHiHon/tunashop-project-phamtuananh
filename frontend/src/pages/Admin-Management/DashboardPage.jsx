@@ -106,6 +106,7 @@ const STATUS_CONFIG = {
     shipping: { label: 'Đang giao', color: 'primary' },
     cancelled: { label: 'Đã hủy', color: 'default' },
     delivered: { label: 'Đã giao', color: 'success' },
+    returned: { label: 'Hoàn hàng', color: 'secondary' },
 };
 
 const DashboardPage = () => {
