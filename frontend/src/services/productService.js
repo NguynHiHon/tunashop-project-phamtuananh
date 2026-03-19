@@ -50,6 +50,18 @@ export const getBrands = async () => {
     return response.data;
 };
 
+// ============ SUPPLIERS (admin) ============
+
+export const getSuppliers = async (params = {}) => {
+    const response = await axiosJWT.get('/api/suppliers', { params });
+    return response.data;
+};
+
+export const createSupplier = async (data) => {
+    const response = await axiosJWT.post('/api/suppliers', data);
+    return response.data;
+};
+
 // ============ VALIDATION ============
 
 export const validateProductPayload = (payload) => {

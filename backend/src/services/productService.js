@@ -16,6 +16,7 @@ async function createProduct(payload) {
   const {
     name,
     brand,
+    supplierId,
     productTypeId,
     attributes,
     price,
@@ -34,6 +35,7 @@ async function createProduct(payload) {
   const errors = [];
   if (!name || typeof name !== 'string' || name.trim() === '') errors.push('name is required');
   if (!productTypeId || !isValidObjectId(productTypeId)) errors.push('productTypeId is required and must be a valid id');
+  if (supplierId !== undefined && supplierId !== null && supplierId !== '' && !isValidObjectId(supplierId)) errors.push('supplierId must be a valid id');
   if (price === undefined || price === null || isNaN(Number(price))) errors.push('price is required and must be a number');
   if (stock !== undefined && (isNaN(Number(stock)) || Number(stock) < 0)) errors.push('stock must be a non-negative number');
   if (salePercent !== undefined && (isNaN(Number(salePercent)) || Number(salePercent) < 0 || Number(salePercent) > 100)) errors.push('salePercent must be between 0 and 100');
@@ -64,6 +66,7 @@ async function createProduct(payload) {
   const product = new Product({
     name,
     brand: brand || '',
+    supplierId: supplierId || undefined,
     productTypeId,
     attributes: attributes || [],
     price,
@@ -110,6 +113,7 @@ async function updateProduct(id, payload) {
   const {
     name,
     brand,
+    supplierId,
     productTypeId,
     attributes,
     price,
@@ -127,6 +131,7 @@ async function updateProduct(id, payload) {
 
   const errors = [];
   if (productTypeId !== undefined && !isValidObjectId(productTypeId)) errors.push('productTypeId must be a valid id');
+  if (supplierId !== undefined && supplierId !== null && supplierId !== '' && !isValidObjectId(supplierId)) errors.push('supplierId must be a valid id');
   if (price !== undefined && isNaN(Number(price))) errors.push('price must be a number');
   if (stock !== undefined && (isNaN(Number(stock)) || Number(stock) < 0)) errors.push('stock must be a non-negative number');
   if (salePercent !== undefined && (isNaN(Number(salePercent)) || Number(salePercent) < 0 || Number(salePercent) > 100)) errors.push('salePercent must be between 0 and 100');
@@ -149,6 +154,7 @@ async function updateProduct(id, payload) {
 
   if (name !== undefined) product.name = name;
   if (brand !== undefined) product.brand = brand;
+  if (supplierId !== undefined) product.supplierId = supplierId || undefined;
   if (productTypeId !== undefined) product.productTypeId = productTypeId;
   if (attributes !== undefined) product.attributes = attributes;
   if (price !== undefined) product.price = price;
@@ -182,6 +188,7 @@ async function updateProduct(id, payload) {
   const populatedProduct = await Product.findById(product._id)
     .populate('defaultImageId')
     .populate('imageIds')
+    .populate('supplierId')
     .populate({
       path: 'productTypeId',
       populate: { path: 'listAttributeIds' }
@@ -195,6 +202,7 @@ async function getProduct(id) {
   const product = await Product.findById(id)
     .populate('defaultImageId')
     .populate('imageIds')
+    .populate('supplierId')
     .populate({
       path: 'productTypeId',
       populate: { path: 'listAttributeIds' }

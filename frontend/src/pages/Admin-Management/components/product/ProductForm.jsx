@@ -11,7 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import FormHelperText from '@mui/material/FormHelperText';
 import useNotifications from '../../hooks/useNotifications/useNotifications';
 import { getAllProductTypes, getProductType } from '../../../../services/categoryService';
-import { getBrands } from '../../../../services/productService';
+import { getBrands, getSuppliers, createSupplier } from '../../../../services/productService';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
@@ -22,6 +22,10 @@ import VariantManager from './VariantManager';
 import Chip from '@mui/material/Chip';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 const DEFAULT_INITIAL = {};
 
@@ -62,6 +66,14 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
   const [warranty, setWarranty] = useState(initial.warranty || '');
   const [brand, setBrand] = useState(initial.brand || '');
   const [brandOptions, setBrandOptions] = useState([]);
+  const [supplierId, setSupplierId] = useState(() => {
+    if (!initial.supplierId) return '';
+    return typeof initial.supplierId === 'string' ? initial.supplierId : (initial.supplierId._id || '');
+  });
+  const [supplierOptions, setSupplierOptions] = useState([]);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
 
   // Variant support
   const [hasVariants, setHasVariants] = useState(initial.hasVariants || false);
@@ -131,6 +143,13 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
       } catch (err) {
         console.error('Failed to load brands, using default list.', err);
         setBrandOptions(['Victor', 'Yonex', 'Li-Ning', 'Mizuno', 'Kumbo', 'Acer']);
+      }
+      try {
+        const sRes = await getSuppliers();
+        setSupplierOptions(Array.isArray(sRes) ? sRes : sRes.data || []);
+      } catch (err) {
+        console.error('Failed to load suppliers.', err);
+        setSupplierOptions([]);
       }
     })();
   }, []);
@@ -224,6 +243,8 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
     setPrice(initial.price ?? '');
     setStock(initial.stock ?? 0);
     setBrand(initial.brand || '');
+    const sid = initial.supplierId ? (typeof initial.supplierId === 'string' ? initial.supplierId : (initial.supplierId._id || '')) : '';
+    setSupplierId(prev => prev === sid ? prev : sid);
     setHasVariants(initial.hasVariants || false);
     setVariants(initial.variants || []);
     // Don't set attributes here — the productTypeId effect handles building
@@ -350,6 +371,7 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
     const payload = {
       name: name.trim(),
       brand: brand.trim(),
+      supplierId: supplierId || undefined,
       price: Number(price),
       stock: hasVariants ? variants.reduce((sum, v) => sum + (v.stock || 0), 0) : Number(stock),
       productTypeId: productTypeId.trim(),
@@ -399,6 +421,36 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
     setAttributes(prev => prev.map(a => String(a.attributeId) === String(attributeId) ? ({ ...a, value }) : a));
   };
 
+  const handleCreateSupplier = async () => {
+    const name = newSupplierName.trim();
+    if (!name) {
+      notif.show('Tên nhà cung cấp là bắt buộc', { severity: 'error' });
+      return;
+    }
+    setCreatingSupplier(true);
+    try {
+      const res = await createSupplier({ name });
+      const supplier = res.data || res;
+      setSupplierOptions(prev => [...prev, supplier]);
+      setSupplierId(supplier._id);
+      setNewSupplierName('');
+      notif.show('Đã thêm nhà cung cấp', { severity: 'success' });
+    } catch (err) {
+      notif.show('Không thể thêm nhà cung cấp', { severity: 'error' });
+    } finally {
+      setCreatingSupplier(false);
+    }
+  };
+
+  const openSupplierDialog = () => {
+    setNewSupplierName('');
+    setSupplierDialogOpen(true);
+  };
+
+  const closeSupplierDialog = () => {
+    setSupplierDialogOpen(false);
+  };
+
   // Attributes are predefined by product type; no add/remove in this form
 
 
@@ -446,6 +498,22 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="supplier-label">Nhà cung cấp</InputLabel>
+              <Select
+                labelId="supplier-label"
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                label="Nhà cung cấp"
+              >
+                <MenuItem value="">-- Chọn --</MenuItem>
+                {supplierOptions.map((s) => (
+                  <MenuItem key={s._id} value={s._id}>{s.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={6} sm={6} md={3}>
             <TextField label="Giá (VNĐ)" type="number" fullWidth value={price} onChange={e => setPrice(e.target.value)} error={!!errors.price} helperText={errors.price} required />
           </Grid>
@@ -460,8 +528,34 @@ export default function ProductForm({ initial = DEFAULT_INITIAL, onSubmit }) {
               helperText={hasVariants ? "Tự động tính từ số lượng biến thể" : ""}
             />
           </Grid>
+          <Grid item xs={12} sm={6} md={6}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: { xs: 0, md: 0.5 } }}>
+              <Button variant="outlined" onClick={openSupplierDialog}>
+                Tạo nhà cung cấp
+              </Button>
+            </Box>
+          </Grid>
         </Grid>
       </Paper>
+
+      <Dialog open={supplierDialogOpen} onClose={closeSupplierDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Tạo nhà cung cấp</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            label="Tên nhà cung cấp"
+            value={newSupplierName}
+            onChange={(e) => setNewSupplierName(e.target.value)}
+            fullWidth
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeSupplierDialog}>Hủy</Button>
+          <Button variant="contained" onClick={handleCreateSupplier} disabled={creatingSupplier}>
+            {creatingSupplier ? <CircularProgress size={18} /> : 'Tạo'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Section 2: Images ── */}
       <Paper sx={{ p: 3, mb: 2.5 }}>

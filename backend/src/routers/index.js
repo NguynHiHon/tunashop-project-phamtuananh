@@ -17,6 +17,7 @@ const contactRouter = require('./contactRouter');
 const vnpayRouter = require('./vnpayRouter');
 const aiAdvisorRouter = require('./aiAdvisorRouter');
 const returnRouter = require('./returnRouter');
+const supplierRouter = require('./supplierRouter');
 const router = express.Router();
 
 router.use('/auth', authRouter);
@@ -36,4 +37,5 @@ router.use('/contact', contactRouter);
 router.use('/vnpay', vnpayRouter);
 router.use('/ai', aiAdvisorRouter);
 router.use('/returns', returnRouter);
+router.use('/suppliers', supplierRouter);
 module.exports = router;

@@ -16,6 +16,7 @@ const VariantSchema = new mongoose.Schema({
 const ProductSchema = new mongoose.Schema({
     name: { type: String, required: true },
     brand: { type: String, default: '' },
+    supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
     productTypeId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'ProductType' },
     attributes: [
         {
