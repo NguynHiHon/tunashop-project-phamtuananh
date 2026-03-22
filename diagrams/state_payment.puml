@@ -1,0 +1,14 @@
+@startuml
+title Sơ đồ Trạng thái - Thanh toán Đơn hàng (Payment)
+[*] --> unpaid : Khởi tạo GD (Tạo Đơn)
+
+unpaid --> paid : Giao dịch thành công (VNPay/Thẻ/Tiền mặt COD)
+unpaid --> failed : Giao dịch thất bại / Quá hạn / Hủy GD
+
+paid --> refunded : Đơn bị hủy / Khách hoàn trả thành công
+
+failed --> unpaid : Khách thử thanh toán lại
+
+refunded --> [*]
+paid --> [*]
+@enduml

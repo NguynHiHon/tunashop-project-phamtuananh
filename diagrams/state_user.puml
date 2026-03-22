@@ -1,0 +1,13 @@
+@startuml
+title Sơ đồ Trạng thái - Tài khoản người dùng (User Account)
+[*] --> Inactive : Đăng ký (Đợi OTP/Kích hoạt)
+Inactive --> active : Kích hoạt thành công
+
+active --> suspended : Bị đình chỉ (Vi phạm nhẹ/Xác minh)
+active --> banned : Bị khóa vĩnh viễn (Vi phạm nặng/Lừa đảo)
+
+suspended --> active : Hết hạn đình chỉ / Admin mở khóa
+suspended --> banned : Tái phạm / Đóng tài khoản vĩnh viễn
+
+banned --> [*]
+@enduml

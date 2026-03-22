@@ -1,0 +1,41 @@
+@startuml
+title Sơ đồ Hoạt động - Tư vấn sản phẩm AI (AI Advisor)
+|Khách hàng (User/Guest)|
+start
+:Nhấn Mở Cửa sổ Tư vấn AI (AI Advisor);
+:Gõ câu hỏi/yêu cầu tư vấn (VD: "Tìm vợt cho người mới chơi");
+
+|Hệ thống Frontend (React)|
+:Gửi Request API kèm Lịch sử Chat (Context);
+
+|Hệ thống Backend (NodeJS)|
+:Tiếp nhận yêu cầu tư vấn;
+:Truy vấn Database lấy danh sách Product (Title, Desc, Attributes);
+:Trích xuất & Tối ưu hóa Context Sản phẩm;
+:Đóng gói Câu hỏi Khách + Text Sản phẩm thành Prompt;
+
+|Google Gemini AI (External API)|
+:Nhận Prompt từ Hệ thống;
+:Xử lý Ngôn ngữ Tự nhiên & Phân tích yêu cầu khách;
+:Tìm kiếm và Tóm tắt Sản phẩm phù hợp nhất trong Context;
+:Trả về Văn bản hướng dẫn & Gợi ý (Markdown);
+
+|Hệ thống Backend (NodeJS)|
+:Parsing & Format Response từ Gemini;
+:Trả về kết quả Gợi ý qua API (JSON);
+
+|Hệ thống Frontend (React)|
+:Render Markdown HTML ra giao diện Chatbot;
+:Hiển thị Link Sản phẩm được Nhắc đến;
+
+|Khách hàng (User/Guest)|
+:Đọc kết quả Tư vấn AI;
+if (Tìm thấy Sản phẩm ưng ý?) then (Có)
+  :Nhấn vào Link để xem Chi tiết Sản phẩm;
+  :Thêm vào Giỏ hàng;
+else (Chưa ưng ý)
+  :Đặt câu hỏi đào sâu hoặc đổi yêu cầu;
+  :Tiếp tục Chat với AI;
+endif
+stop
+@enduml

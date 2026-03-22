@@ -1,0 +1,59 @@
+@startuml
+title Sơ đồ Hoạt động - Xử lý Đổi/Trả hàng (Return Process)
+|Khách hàng|
+start
+:Nhận được Món hàng đã đặt (Trạng thái Delivered);
+:Kiểm tra hàng hóa (Phát hiện lỗi/Hư hỏng);
+:Vào chi tiết Đơn hàng, Chọn "Yêu cầu Đổi/Trả";
+:Nhập Lý do cụ thể (Bắt buộc);
+:Đính kèm Hình ảnh / Video minh chứng;
+:Xác nhận Gửi yêu cầu;
+
+|Hệ thống Backend|
+:Lưu Trữ Yêu cầu Đổi/Trả (Return Model);
+:Chuyển trạng thái Đơn = "Đang xử lý đổi/trả";
+:Gửi thông báo Socket.IO / Email cho Nhân viên;
+
+|Nhân viên Bán hàng/Kho|
+:Nhận thông báo Yêu cầu Đổi/Trả Khách hàng;
+:Xem xét Lý do & Bằng chứng Hình ảnh;
+if (Yêu cầu Hợp lệ (Lỗi do NSX/Shop)?) then (Không - Từ chối)
+  :Nhập lý do Từ chối (VD: Khách làm hỏng);
+  :Chuyển trạng thái Yêu cầu = "rejected";
+  |Hệ thống Backend|
+  :Thông báo cho Khách hàng quyết định Từ chối;
+  |Khách hàng|
+  :Đọc thông báo & Kết thúc khiếu nại;
+  stop
+else (Có - Chấp nhận Đổi/Trả)
+  |Nhân viên Bán hàng/Kho|
+  :Duyệt yêu cầu = "confirmed";
+  :Cung cấp địa chỉ Kho/Bưu cục cho Khách gửi lại;
+  
+  |Khách hàng|
+  :Đóng gói Hàng hóa theo hướng dẫn;
+  :Gửi trả lại hàng cho Shop qua ĐVVC;
+  
+  |Nhân viên Bán hàng/Kho|
+  :Nhận hàng hoàn gửi trả;
+  :Kiểm định thực tế tình trạng Hàng hoàn;
+  
+  if (Chất lượng đúng mô tả?) then (Không)
+    :Hủy duyệt (Hàng đã bị tráo / phá hoại tiếp);
+    :Trả lại hàng hỏng cho Khách;
+    stop
+  else (Đúng mô tả lỗi)
+    :Trừ Tồn kho hoặc Xử lý Hủy bỏ SP hỏng;
+    :Tiến hành Hoàn Tiền (Refund) / Đổi Mới (Exchange);
+    
+    |Hệ thống Backend|
+    :Lưu lịch sử Giao dịch Hoàn tiền;
+    :Cập nhật Trạng thái Đơn hàng = "returned";
+    :Gửi Email Xác Đáng hoàn tiền thành công;
+    
+    |Khách hàng|
+    :Nhận lại Tiền / Sản phẩm mới đổi;
+  endif
+endif
+stop
+@enduml

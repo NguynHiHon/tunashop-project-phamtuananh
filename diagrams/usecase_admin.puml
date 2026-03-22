@@ -1,0 +1,58 @@
+@startuml
+title Sơ đồ Usecase - Quản trị viên (Admin)
+left to right direction
+actor "Quản trị viên (Admin)" as Admin
+
+package "Tuna Shop - Quản trị viên" {
+  usecase "Tất cả chức năng của Nhân viên" as UC_StaffAccess
+  
+  usecase "Quản lý Sản phẩm (Toàn quyền)" as UC_ProductAdmin
+  usecase "Thêm, Sửa, Xóa Sản phẩm" as UC_CRUDProduct
+  usecase "Quản lý Thuộc tính & Hình ảnh" as UC_ProductAssets
+  usecase "Cấu hình Khuyến mãi / Sales" as UC_SetSales
+  
+  usecase "Quản lý Người dùng" as UC_User
+  usecase "Xem danh sách Khách/Nhân viên" as UC_ViewUsers
+  usecase "Phân quyền (Assign Role)" as UC_AssignRole
+  usecase "Khóa/Đình chỉ Tài khoản (Ban/Suspend)" as UC_BanUser
+  
+  usecase "Quản lý Nhà cung cấp" as UC_Supplier
+  usecase "Thêm, Sửa, Xóa NCC" as UC_CRUDSupplier
+  
+  usecase "Cấu hình Hệ thống" as UC_Config
+  usecase "Chỉnh sửa Banner" as UC_Banner
+  usecase "Cấu hình Phí vận chuyển" as UC_ShippingFee
+  usecase "Cấu hình Thông tin Liên hệ" as UC_ContactInfo
+  
+  usecase "Thống kê & Báo cáo" as UC_Report
+  usecase "Báo cáo Doanh thu (Dashboard)" as UC_Revenue
+  usecase "Thống kê Sản phẩm bán chạy" as UC_TopProduct
+}
+
+actor "Nhân viên (Staff)" as Staff
+Admin -|> Staff : "Kế thừa quyền"
+
+Admin --> UC_StaffAccess
+Admin --> UC_ProductAdmin
+Admin --> UC_User
+Admin --> UC_Supplier
+Admin --> UC_Config
+Admin --> UC_Report
+
+UC_ProductAdmin ..> UC_CRUDProduct : <<include>>
+UC_ProductAdmin <.. UC_ProductAssets : <<extend>>
+UC_ProductAdmin <.. UC_SetSales : <<extend>>
+
+UC_User ..> UC_ViewUsers : <<include>>
+UC_User <.. UC_AssignRole : <<extend>>
+UC_User <.. UC_BanUser : <<extend>>
+
+UC_Supplier ..> UC_CRUDSupplier : <<include>>
+
+UC_Config ..> UC_Banner : <<include>>
+UC_Config ..> UC_ShippingFee : <<include>>
+UC_Config ..> UC_ContactInfo : <<include>>
+
+UC_Report ..> UC_Revenue : <<include>>
+UC_Report ..> UC_TopProduct : <<include>>
+@enduml

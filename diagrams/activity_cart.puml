@@ -1,0 +1,48 @@
+@startuml
+title Sơ đồ Hoạt động - Quản lý Giỏ hàng & Đồng bộ Session (Cart Process)
+|Khách hàng (Guest)|
+start
+:Xem Sản phẩm;
+:Chọn Phân loại (Kích cỡ, Màu) & Thêm vào Giỏ hàng;
+
+|Hệ thống Backend|
+:Kiểm tra số lượng Tồn kho (Stock);
+if (Còn đủ hàng?) then (Không)
+  :Báo lỗi "Sản phẩm hết hàng / Không đủ số lượng";
+  |Khách hàng (Guest)|
+  stop
+else (Có)
+  |Hệ thống Backend|
+  :Lưu sản phẩm vào Giỏ hàng Tạm thời (Session/LocalStorage);
+  |Khách hàng (Guest)|
+  :Biểu tượng Giỏ hàng cập nhật số lượng;
+endif
+
+|Khách hàng (Guest)|
+:Thực hiện Đăng nhập vào hệ thống;
+
+|Hệ thống Backend|
+:Xác thực thành công (Retrieve User);
+:Truy xuất Giỏ hàng hiện tại trong Database (Cart Model);
+if (Có Giỏ hàng Tạm thời (Session)?) then (Có)
+  :Tiến hành Gộp (Merge) Giỏ hàng;
+  :Nếu trùng khớp Sản phẩm & Phân loại -> Cộng dồn Số lượng;
+  :Nếu Sản phẩm/Phân loại mới -> Thêm dòng mới vào DB;
+  :Xóa Giỏ hàng Session;
+else (Không)
+  :Gữ nguyên Giỏ hàng Database;
+endif
+
+|Khách hàng (User)|
+:Truy cập trang "Giỏ hàng";
+:Kiểm tra danh sách, Tăng/Giảm số lượng hoặc Xóa;
+
+|Hệ thống Backend|
+:Validate số lượng Tồn kho sau mỗi lần đổi;
+:Tính toán lại Tổng hóa đơn (Total Price);
+:Lưu Cập nhật vào Database;
+
+|Khách hàng (User)|
+:Tiến hành chuyển sang trang Thanh toán (Checkout);
+stop
+@enduml

@@ -1,0 +1,13 @@
+@startuml
+title Sơ đồ Trạng thái - Sản phẩm (Product)
+[*] --> Draft : Khởi tạo (Chưa nhập đủ thông tin)
+
+Draft --> Active : Đăng bán (Publish)
+Active --> OutOfStock : Hết hàng (Inventory = 0)
+OutOfStock --> Active : Mở bán lại (Nhập kho xong)
+Active --> Hidden : Tạm ẩn (Ngừng kinh doanh tạm thời)
+Hidden --> Active : Bỏ ẩn (Mở bán lại)
+
+Draft --> [*] : Xóa vĩnh viễn
+Hidden --> [*] : Xóa vĩnh viễn
+@enduml

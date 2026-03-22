@@ -1,0 +1,29 @@
+@startuml
+title Sơ đồ Trạng thái - Đơn hàng (Order)
+[*] --> pending : Khách hàng tạo đơn
+
+state "Giai đoạn Xử lý" as Processing {
+  pending --> approved : Nhân viên duyệt (Còn hàng)
+  pending --> rejected : Nhân viên từ chối (Hết hàng/Giả mạo)
+  pending --> cancelled : Khách hàng tự hủy (Chỉ khi Pending)
+}
+
+state "Giai đoạn Giao hàng" as Delivery {
+  approved --> shipping : Đã bàn giao ĐVVC
+  shipping --> delivered : Giao hàng thành công
+  shipping --> returned : Giao thất bại / Hoàn trả nguyên vẹn
+  shipping --> cancelled : ĐVVC báo hỏng / Mất hàng
+}
+
+state "Trạng thái Thanh toán đính kèm" as Payment {
+  state "Chưa thanh toán (unpaid)" as unpaid
+  state "Đã thanh toán (paid)" as paid
+  state "Thanh toán lỗi (failed)" as failed
+}
+
+Processing --> Delivery : Chuyển giao
+rejected --> [*]
+cancelled --> [*]
+delivered --> [*]
+returned --> [*]
+@enduml

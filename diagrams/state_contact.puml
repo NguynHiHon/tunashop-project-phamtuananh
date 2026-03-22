@@ -1,0 +1,10 @@
+@startuml
+title Sơ đồ Trạng thái - Tin nhắn Liên hệ (Contact Message)
+[*] --> new : Khách hàng gửi Form liên hệ/Hỗ trợ
+
+new --> in_progress : Nhân viên tiếp nhận xử lý (Assigned)
+in_progress --> handled : Đã giải quyết xong & Phản hồi
+
+new --> handled : Đánh dấu hoàn tất nhanh (Không cần xử lý thêm)
+handled --> [*]
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+title Sơ đồ Hoạt động - Thanh toán Đơn hàng (Checkout Process)
+|Khách hàng|
+start
+:Nhập thông tin Giao hàng (Địa chỉ, SĐT);
+:Chọn phương thức thanh toán;
+
+if (Loại thanh toán?) then (VNPay)
+  |Hệ thống Backend|
+  :Tạo mã giao dịch (TxnRef);
+  :Tạo URL thanh toán VNPay bằng VNPAY SDK/API;
+  |Khách hàng|
+  :Chuyển hướng đến Cổng VNPay;
+  :Nhập thông tin thẻ / Quét mã QR QR Code;
+  |Cổng VNPay|
+  :Xác thực tài khoản hạn mức;
+  :Xử lý trừ tiền;
+  if (Giao dịch Thành công?) then (Có)
+    :Chuyển hướng về Return URL (Tham số vnp_ResponseCode = '00');
+    |Hệ thống Backend|
+    :Validate Checksum Hash (Bảo mật);
+    :Cập nhật Đơn hàng = "paid";
+    :Xóa Giỏ hàng;
+    :Emit Socket "New Order" cho Admin;
+  else (Không)
+    |Cổng VNPay|
+    :Chuyển hướng về Return URL (Lỗi);
+    |Hệ thống Backend|
+    :Validate Checksum Hash;
+    :Cập nhật Đơn hàng = "failed";
+    |Khách hàng|
+    :Nhận thông báo "Giao dịch thất bại";
+    stop
+  endif
+
+else (Thanh toán COD)
+  |Hệ thống Backend|
+  :Tạo đơn hàng (Trạng thái Thanh toán: "unpaid");
+  :Xóa Giỏ hàng;
+  :Emit Socket "New Order" cho Admin;
+endif
+
+|Nhân viên Quản lý|
+:Nhận thông báo Đơn mới (Giao diện Admin);
+:Tiến hành kiểm tra Kho & Duyệt Đơn (approved);
+:Đóng gói & Phân công ĐVVC (shipping);
+
+|Khách hàng|
+:Theo dõi Đơn hàng;
+:Nhận hàng & Thanh toán COD (nếu có);
+:Hoàn tất Đơn hàng (delivered);
+stop
+@enduml

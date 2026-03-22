@@ -1,0 +1,48 @@
+@startuml
+title Sơ đồ Hoạt động - Xác thực & Đăng nhập (Authentication)
+|Người dùng|
+start
+:Truy cập trang Đăng nhập / Đăng ký;
+if (Chọn phương thức xác thực?) then (Cơ bản - Username/Password)
+  :Nhập thông tin (Email/Tài khoản, Mật khẩu);
+  |Hệ thống Backend|
+  :Truy vấn Database (User Model);
+  :Kiểm tra User có tồn tại không & Trạng thái Active?;
+  if (Mật khẩu đúng & Active?) then (Có)
+    :Tạo JWT (Json Web Token);
+    :Trả về Token cho Client;
+    |Người dùng|
+    :Lưu Token (Local Storage / Cookie);
+  else (Không hợp lệ)
+    |Hệ thống Backend|
+    :Trả về lỗi "Sai mật khẩu" hoặc "Tài khoản bị khóa";
+    |Người dùng|
+    :Hiển thị thông báo Lỗi;
+    stop
+  endif
+
+else (Xác thực Google OAuth)
+  |Người dùng|
+  :Bấm "Đăng nhập bằng Google";
+  |Google Auth Server|
+  :Yêu cầu cấp quyền chia sẻ Profile & Email;
+  :Trả về JWT/Profile Data qua Google Identity;
+  |Hệ thống Backend|
+  :Decode & Validate ID Token từ Google;
+  :Lấy Email, Name, Avatar gốc;
+  if (Email đã tồn tại DB?) then (Có)
+    :Cập nhật AuthProvider (Nếu Cần);
+  else (Không)
+    :Tạo Account mới (authProvider=google);
+  endif
+  :Tạo JWT Local Token;
+  :Trả về Token cho Client;
+  |Người dùng|
+  :Lưu Token (Local Storage);
+endif
+
+|Người dùng|
+:Đăng nhập thành công;
+:Truy cập các tính năng Member (Giỏ hàng, Đơn hàng, Chat);
+stop
+@enduml

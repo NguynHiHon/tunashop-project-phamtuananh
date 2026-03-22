@@ -1,0 +1,59 @@
+@startuml
+title Sơ đồ Usecase - Khách hàng (User)
+left to right direction
+actor "Khách hàng (User)" as User
+
+package "Tuna Shop - Khách hàng" {
+  usecase "Quản lý Tài khoản" as UC_Account
+  usecase "Cập nhật hồ sơ (Tên, SDT, Địa chỉ...)" as UC_UpdateProfile
+  usecase "Đổi mật khẩu" as UC_ChangePassword
+  usecase "Đăng xuất" as UC_Logout
+  
+  usecase "Quản lý Giỏ hàng (DB)" as UC_Cart
+  usecase "Thêm/Xóa sản phẩm" as UC_AddRemove
+  usecase "Cập nhật số lượng" as UC_UpdateQuantity
+  
+  usecase "Đặt & Thanh toán Đơn hàng" as UC_Checkout
+  usecase "Chọn phương thức thanh toán (COD/VNPay)" as UC_SelectPayment
+  
+  usecase "Quản lý Đơn hàng" as UC_Order
+  usecase "Xem lịch sử & Chi tiết đơn" as UC_OrderHistory
+  usecase "Theo dõi vận đơn" as UC_TrackOrder
+  usecase "Hủy đơn hàng (khi Pending)" as UC_CancelOrder
+  
+  usecase "Quản lý Đổi/Trả" as UC_Return
+  usecase "Gửi yêu cầu & Bằng chứng" as UC_SubmitProof
+  usecase "Theo dõi trạng thái hoàn tiền" as UC_TrackReturn
+  
+  usecase "Hỗ trợ Trực tuyến" as UC_Support
+  usecase "Nhắn tin với Nhân viên (Chat IO)" as UC_Chat
+  usecase "Nhận tư vấn AI (AI Advisor)" as UC_AIAdvisor
+}
+
+User --> UC_Account
+User --> UC_Cart
+User --> UC_Checkout
+User --> UC_Order
+User --> UC_Return
+User --> UC_Support
+
+UC_Account ..> UC_UpdateProfile : <<include>>
+UC_Account ..> UC_ChangePassword : <<include>>
+UC_Account ..> UC_Logout : <<include>>
+
+UC_Cart ..> UC_AddRemove : <<include>>
+UC_Cart <.. UC_UpdateQuantity : <<extend>>
+
+UC_Checkout ..> UC_SelectPayment : <<include>>
+
+UC_Order ..> UC_OrderHistory : <<include>>
+UC_Order <.. UC_TrackOrder : <<extend>>
+UC_Order <.. UC_CancelOrder : <<extend>>
+
+UC_Return ..> UC_SubmitProof : <<include>>
+UC_Return <.. UC_TrackReturn : <<extend>>
+
+UC_Support ..> UC_Chat : <<include>>
+UC_Support ..> UC_AIAdvisor : <<include>>
+
+@enduml

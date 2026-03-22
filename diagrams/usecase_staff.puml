@@ -1,0 +1,59 @@
+@startuml
+title Sơ đồ Usecase - Nhân viên (Staff)
+left to right direction
+actor "Nhân viên (Staff)" as Staff
+
+package "Tuna Shop - Nhân viên" {
+  usecase "Xác thực & Hồ sơ" as UC_Auth
+  usecase "Đăng nhập/Đăng xuất" as UC_Login
+  usecase "Quản lý thông tin cá nhân" as UC_Profile
+  
+  usecase "Tra cứu Sản phẩm" as UC_Product
+  usecase "Xem danh sách và chi tiết Sản phẩm" as UC_ViewProduct
+  
+  usecase "Quản lý Đơn hàng" as UC_Order
+  usecase "Xem danh sách và Chi tiết đơn" as UC_ViewOrder
+  usecase "Duyệt Đơn / Từ chối" as UC_ApproveOrder
+  usecase "Chuyển giao hàng" as UC_ShipOrder
+  
+  usecase "Quản lý Đổi/Trả" as UC_Return
+  usecase "Xem & Xác nhận Yêu cầu Đổi/Trả" as UC_ConfirmReturn
+  usecase "Xử lý Hoàn tiền/Đổi hàng" as UC_Refund
+  
+  usecase "Quản lý Kho (Warehouse)" as UC_Warehouse
+  usecase "Kiểm kê số lượng (In Stock)" as UC_Inventory
+  usecase "Nhập lô hàng mới (Import)" as UC_Import
+  
+  usecase "Chăm sóc Khách hàng" as UC_Support
+  usecase "Chat trực tuyến qua WebSockets" as UC_Chat
+  
+  usecase "Quản lý Bài viết/Tin tức" as UC_Article
+  usecase "Tạo, Sửa, Xóa Bài viết" as UC_CRUDArticle
+}
+
+Staff --> UC_Auth
+Staff --> UC_Product
+Staff --> UC_Order
+Staff --> UC_Return
+Staff --> UC_Warehouse
+Staff --> UC_Support
+Staff --> UC_Article
+
+UC_Auth ..> UC_Login : <<include>>
+UC_Auth <.. UC_Profile : <<extend>>
+
+UC_Product ..> UC_ViewProduct : <<include>>
+
+UC_Order ..> UC_ViewOrder : <<include>>
+UC_Order <.. UC_ApproveOrder : <<extend>>
+UC_Order <.. UC_ShipOrder : <<extend>>
+
+UC_Return ..> UC_ConfirmReturn : <<include>>
+UC_Return <.. UC_Refund : <<extend>>
+
+UC_Warehouse ..> UC_Inventory : <<include>>
+UC_Warehouse <.. UC_Import : <<extend>>
+
+UC_Support ..> UC_Chat : <<include>>
+UC_Article ..> UC_CRUDArticle : <<include>>
+@enduml
